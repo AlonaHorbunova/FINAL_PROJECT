@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    "typeRoots": ["./node_modules/@types", "./src/types"],
+
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ESNext",
+
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    // Проверка типов
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false, // ВЫКЛЮЧАЕМ, чтобы Mongoose не ругался
+
+    // Совместимость и скорость
+    "jsx": "react-jsx",
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "esModuleInterop": true, // Добавлено для корректного импорта библиотек
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
