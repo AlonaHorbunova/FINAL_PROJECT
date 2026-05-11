@@ -1,13 +1,14 @@
 import type { Request, Response, NextFunction } from "express";
 import { Post } from "../db/models/Post.js";
 import { CustomError } from "../utils/CustomError.js";
-import sharp from "sharp"; // Для сжатия
+import sharp from "sharp";
 import path from "path";
 import fs from "fs";
 
+// Расширяем интерфейс, чтобы TS видел и пользователя, и файл от multer
 interface AuthRequest extends Request {
   user?: { id: string };
-  file?: any; // Добавляем поддержку файла от multer
+  file?: Express.Multer.File;
 }
 
 export const getAllPosts = async (
@@ -16,10 +17,9 @@ export const getAllPosts = async (
   next: NextFunction,
 ) => {
   try {
-    // В Инстаграме мы хотим видеть не только автора, но и его аватар
     const posts = await Post.find()
-      .populate("user", "username avatar")
-      .sort({ createdAt: -1 }); // Новые посты сверху
+      .populate("user", "username avatar") // Подтягиваем данные автора
+      .sort({ createdAt: -1 });
     res.json(posts);
   } catch (error) {
     next(error);
@@ -42,30 +42,32 @@ export const createPost = async (
       throw new CustomError("Недостаточно прав", 401);
     }
 
-    // Обработка изображения (делаем его легковесным)
+    // Определяем папку. Давай использовать 'uploads' в корне, как договаривались
+    const uploadDir = "uploads";
     const fileName = `post-${Date.now()}.webp`;
-    const outputPath = path.join("public", "uploads", fileName);
+    const outputPath = path.join(uploadDir, fileName);
 
-    // Создаем папку, если её нет
-    if (!fs.existsSync("public/uploads")) {
-      fs.mkdirSync("public/uploads", { recursive: true });
+    // Создаем папку, если забыли
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
     }
 
+    // SHARP: Берем буфер из памяти, сжимаем и сохраняем на диск
     await sharp(req.file.buffer)
-      .resize(1080, 1080, { fit: "inside" })
+      .resize(1080, 1080, { fit: "cover" }) // 'cover' лучше для Инстаграма (заполнит квадрат)
       .webp({ quality: 80 })
       .toFile(outputPath);
 
-    // Создаем пост по твоей НОВОЙ модели
+    // Сохраняем в базу
     const newPost = new Post({
       user: req.user.id,
-      image: `/uploads/${fileName}`,
+      image: `/uploads/${fileName}`, // Этот путь будет отдавать статика
       caption,
     });
 
     await newPost.save();
 
-    // Отправляем уведомление через сокеты (если нужно сразу)
+    // Сокеты
     const io = req.app.get("io");
     if (io) io.emit("new_post", { message: "Новый пост!", post: newPost });
 

@@ -34,6 +34,7 @@ const startServer = (): void => {
   app.use("/api/comments", commentRoutes); // Добавлено
   app.use("/api/notifications", notificationRoutes); // Добавлено
   app.use("/api/users", userRoutes);
+  app.use("/uploads", express.static("uploads"));
 
   app.use(notFound);
   app.use(errorHandler);

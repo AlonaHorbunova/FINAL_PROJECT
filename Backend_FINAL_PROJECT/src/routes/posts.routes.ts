@@ -10,6 +10,11 @@ router.get("/", getAllPosts);
 
 // Маршрут для создания поста (только для авторизованных + загрузка фото)
 // "image" — это имя поля, которое ты будешь использовать в Postman (form-data)
-router.post("/", authMiddleware as any, upload.single("image") as any, createPost);
+router.post(
+  "/",
+  authMiddleware as any,
+  upload.single("image") as any,
+  createPost,
+);
 
 export default router;
