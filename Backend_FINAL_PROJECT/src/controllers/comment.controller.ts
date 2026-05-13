@@ -5,6 +5,11 @@ import { Notification } from "../db/models/Notification.js";
 import { Server } from "socket.io";
 import { Types } from "mongoose";
 
+// Расширяем интерфейс
+interface AuthRequest extends Request {
+  user?: { id: string };
+}
+
 export const addComment = async (
   req: Request,
   res: Response,
@@ -12,40 +17,44 @@ export const addComment = async (
 ) => {
   try {
     const { postId } = req.params;
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
     const { text } = req.body;
 
-    // 1. Убираем any через unknown (профессиональный подход)
-    const userContext = req as unknown as { user?: { id: string } };
-    const userId = userContext.user?.id;
-
-    if (!userId) throw new Error("Пользователь не авторизован");
+    // 1. Проверяем наличие ID и текста
+    if (!userId || !postId) {
+      return res
+        .status(401)
+        .json({ message: "Недостаточно данных для комментария" });
+    }
 
     // 2. Ищем пост
     const post = await Post.findById(postId);
-    if (!post) throw new Error("Пост не найден");
+    if (!post) {
+      return res.status(404).json({ message: "Пост не найден" });
+    }
 
-    const postData = post as unknown as { user: { toString(): string } };
+    // Здесь используем 'author' и приводим к любому типу, чтобы взять ID строкой
+    const postAuthorId = (post as any).author.toString();
 
+    // 3. Создаем комментарий (userId as string — это "успокоительное" для TS)
     const comment = await Comment.create({
-      user: new Types.ObjectId(userId), // Теперь это ObjectId, а не строка
-      post: new Types.ObjectId(postId), // И это тоже
+      user: new Types.ObjectId(userId as string),
+      post: new Types.ObjectId(postId as string),
       text,
     });
 
-    const postAuthorId = postData.user.toString();
-
-    // 3. Уведомления и Сокеты
+    // 4. Логика уведомлений
     if (postAuthorId !== userId) {
       await Notification.create({
-        receiver: new Types.ObjectId(postAuthorId),
-        issuer: new Types.ObjectId(userId),
+        receiver: new Types.ObjectId(postAuthorId as string),
+        issuer: new Types.ObjectId(userId as string),
         type: "comment",
-        post: new Types.ObjectId(postId),
+        post: new Types.ObjectId(postId as string),
       });
 
-      const io = req.app.get("io") as unknown as Server;
-
-      if (io && typeof io.to === "function") {
+      const io = req.app.get("io") as Server;
+      if (io) {
         io.to(postAuthorId).emit("notification", {
           message: "Новый комментарий!",
         });

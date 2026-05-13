@@ -1,22 +1,8 @@
 import multer from "multer";
-import path from "path";
 import { CustomError } from "../utils/CustomError.js";
 
-// Настройка места хранения
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    // ВАЖНО: создай папку 'uploads' в корне проекта вручную!
-    cb(null, "uploads/");
-  },
-  filename: (_req, file, cb) => {
-    // Генерируем уникальное имя: дата + случайное число + расширение
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(
-      null,
-      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname),
-    );
-  },
-});
+// Используем memoryStorage, чтобы Sharp мог обработать файл из буфера (req.file.buffer)
+const storage = multer.memoryStorage();
 
 // Фильтр файлов: разрешаем только изображения
 const fileFilter = (_req: any, file: Express.Multer.File, cb: any) => {

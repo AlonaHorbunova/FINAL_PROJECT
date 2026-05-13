@@ -18,7 +18,7 @@ export const getAllPosts = async (
 ) => {
   try {
     const posts = await Post.find()
-      .populate("user", "username avatar") // Подтягиваем данные автора
+      .populate("author", "username avatar") // Подтягиваем данные автора
       .sort({ createdAt: -1 });
     res.json(posts);
   } catch (error) {
@@ -60,8 +60,8 @@ export const createPost = async (
 
     // Сохраняем в базу
     const newPost = new Post({
-      user: req.user.id,
-      image: `/uploads/${fileName}`, // Этот путь будет отдавать статика
+      author: req.user.id, // вместо user
+      imageUrl: `/uploads/${fileName}`, // вместо image
       caption,
     });
 
