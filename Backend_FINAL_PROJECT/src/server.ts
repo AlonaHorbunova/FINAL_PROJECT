@@ -14,6 +14,7 @@ import likeRoutes from "./routes/like.routes.js";
 import commentRoutes from "./routes/comment.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import userRoutes from "./routes/user.routes.js";
+import messageRoutes from "./routes/message.routes.js";
 
 const startServer = (): void => {
   const app: Application = express();
@@ -34,6 +35,7 @@ const startServer = (): void => {
   app.use("/api/comments", commentRoutes); // Добавлено
   app.use("/api/notifications", notificationRoutes); // Добавлено
   app.use("/api/users", userRoutes);
+  app.use("/api/messages", messageRoutes);
   app.use("/uploads", express.static("uploads"));
 
   app.use(notFound);

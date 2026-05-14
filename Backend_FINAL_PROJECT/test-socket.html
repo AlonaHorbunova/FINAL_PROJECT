@@ -1,0 +1,19 @@
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  console.log("Попытка подключения...");
+  const socket = io("http://localhost:3000");
+
+  socket.on("connect", () => {
+    console.log("✅ СОЕДИНЕНИЕ УСТАНОВЛЕНО! ID:", socket.id);
+  });
+
+  socket.on("connect_error", (err) => {
+    console.log("❌ Ошибка подключения:", err.message);
+  });
+
+  socket.on("new_message", (data) => {
+    console.log("📩 ПРИШЛО НОВОЕ СООБЩЕНИЕ:", data);
+    alert("Новое сообщение: " + data.text);
+  });
+</script>
+<h1>Тест Socket.IO</h1>
