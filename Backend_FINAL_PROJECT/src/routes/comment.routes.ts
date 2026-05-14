@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
-// Здесь позже импортируем контроллеры комментариев
+import { addComment } from "../controllers/comment.controller.js";
 
 const router = Router();
 
-// Маршрут для создания комментария будет примерно таким:
-// router.post("/:postId", authMiddleware, createComment);
+// Теперь маршрут активен и принимает postId
+router.post("/:postId", authMiddleware, addComment);
 
 export default router;

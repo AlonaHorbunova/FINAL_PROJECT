@@ -2,6 +2,8 @@ import type { Request, Response, NextFunction } from "express";
 import { Like } from "../db/models/Like.js";
 import { Post } from "../db/models/Post.js";
 import { CustomError } from "../utils/CustomError.js";
+import { Notification } from "../db/models/Notification.js";
+import { Types } from "mongoose";
 
 // Создаем строгий интерфейс для запроса с пользователем
 interface AuthRequest extends Request {
@@ -53,8 +55,18 @@ export const toggleLike = async (
       const newLike = new Like(filter);
       await newLike.save();
 
-      // (Опционально) Здесь можно добавить логику уведомления автора поста через сокеты
-
+      // ЛОГИКА УВЕДОМЛЕНИЯ
+      // Проверяем, что лайк ставит НЕ автор поста самому себе
+      if (post && post.author && userId) {
+        if (post.author.toString() !== userId) {
+          await Notification.create({
+            receiver: post.author,
+            issuer: new Types.ObjectId(userId as string), // Явно говорим, что это строка
+            type: "like",
+            post: new Types.ObjectId(postId as string), // Явно говорим, что это строка
+          });
+        }
+      }
       return res.status(201).json({
         message: "Лайк поставлен",
         liked: true,

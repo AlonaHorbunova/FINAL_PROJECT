@@ -58,8 +58,9 @@ export const login = async (
     }
 
     // Ищем пользователя и явно просим Mongoose вернуть пароль для проверки
-    const user = await User.findOne({ email });
-    if (!user) {
+    const user = await User.findOne({ email }).select("+password"); // Явно просим пароль
+
+    if (!user || !user.password) {
       throw new CustomError("Пользователь не найден", 404);
     }
 

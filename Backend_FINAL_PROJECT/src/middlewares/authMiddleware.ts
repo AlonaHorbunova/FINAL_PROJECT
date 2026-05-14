@@ -1,11 +1,26 @@
-// src/middlewares/authMiddleware.ts
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { CustomError } from "../utils/CustomError.js";
 
-export const authMiddleware = async (
-  req: any,
-  res: any,
+// Создаем один общий интерфейс для всего проекта
+export interface AuthRequest extends Request {
+  user?: {
+    id: string;
+    username: string;
+    email: string;
+  };
+}
+
+// Интерфейс для того, что лежит внутри токена
+interface DecodedToken {
+  id: string;
+  username: string;
+  email: string;
+}
+
+export const authMiddleware = (
+  req: AuthRequest, // Используем наш новый интерфейс
+  res: Response,
   next: NextFunction,
 ) => {
   try {
@@ -15,12 +30,17 @@ export const authMiddleware = async (
     }
 
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "secret",
-    ) as any;
 
-    req.user = decoded; // Добавляем данные пользователя в запрос
+    // Проверка: если токен не нашелся в строке, кидаем ошибку
+    if (!token) {
+      throw new CustomError("Токен не предоставлен", 401);
+    }
+
+    const secret = process.env.JWT_SECRET || "secret";
+
+    const decoded = jwt.verify(token, secret) as unknown as DecodedToken;
+
+    req.user = decoded;
     next();
   } catch (error) {
     next(new CustomError("Невалидный токен", 401));
