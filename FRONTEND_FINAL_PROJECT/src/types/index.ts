@@ -16,10 +16,10 @@ export interface IComment {
 // 3. Обновим пост
 export interface IPost {
   _id: string;
-  image: string;
-  description: string;
-  author: IUser; // автор поста
-  likes: string[]; // массив ID тех, кто лайкнул
+  imageUrl: string; // Изменили с image на imageUrl под бэкенд
+  caption: string; // Изменили с description на caption под бэкенд
+  author: IUser; // Автор поста (его мы популейтим)
+  likes: string[]; // Массив ID тех, кто лайкнул
   comments: IComment[];
   createdAt: string;
 }

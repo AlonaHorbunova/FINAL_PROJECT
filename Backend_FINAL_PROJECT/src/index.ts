@@ -18,8 +18,13 @@ const bootstrap = async (): Promise<void> => {
   try {
     await connectDB();
     startServer();
-  } catch (error: any) {
-    console.error("Ошибка при запуске приложения:", error.message);
+  } catch (error: unknown) {
+    // Проверяем, является ли error объектом с полем message (безопасное приведение)
+    if (error instanceof Error) {
+      console.error("Ошибка при запуске приложения:", error.message);
+    } else {
+      console.error("Неизвестная ошибка при запуске приложения:", error);
+    }
     process.exit(1);
   }
 };

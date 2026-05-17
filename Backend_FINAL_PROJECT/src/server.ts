@@ -15,6 +15,7 @@ import commentRoutes from "./routes/comment.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import messageRoutes from "./routes/message.routes.js";
+import path from "path";
 
 const startServer = (): void => {
   const app: Application = express();
@@ -28,6 +29,8 @@ const startServer = (): void => {
   app.use(express.json());
 
   app.get("/", (req: Request, res: Response) => res.send("Я родился!"));
+
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   app.use("/api/auth", authRoutes);
   app.use("/api/posts", postsRoutes);

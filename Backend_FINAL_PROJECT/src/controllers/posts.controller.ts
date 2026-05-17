@@ -17,9 +17,11 @@ export const getAllPosts = async (
   next: NextFunction,
 ) => {
   try {
+    // Просто забираем посты и подтягиваем информацию об их авторах
     const posts = await Post.find()
-      .populate("author", "username avatar") // Подтягиваем данные автора
+      .populate("author", "username avatar")
       .sort({ createdAt: -1 });
+
     res.json(posts);
   } catch (error) {
     next(error);
@@ -66,12 +68,16 @@ export const createPost = async (
     });
 
     await newPost.save();
-
+    const populatedPost = await Post.findById(newPost._id).populate(
+      "author",
+      "username avatar",
+    );
     // Сокеты
     const io = req.app.get("io");
-    if (io) io.emit("new_post", { message: "Новый пост!", post: newPost });
+    if (io)
+      io.emit("new_post", { message: "Новый пост!", post: populatedPost });
 
-    res.status(201).json(newPost);
+    res.status(201).json(populatedPost);
   } catch (error) {
     next(error);
   }
