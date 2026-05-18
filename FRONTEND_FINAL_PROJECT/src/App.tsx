@@ -4,7 +4,9 @@ import Sidebar from "./components/Layout/Sidebar"; // Проверь этот п
 import RegisterPage from "./pages/RegisterPage";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
+import ExplorePage from "./pages/ExplorePage";
 import { useAppSelector } from "./redux/hooks";
+import ResetPage from "./pages/ResetPage";
 
 function App() {
   const { token } = useAppSelector((state) => state.auth);
@@ -37,6 +39,7 @@ function App() {
             path="/register"
             element={!token ? <RegisterPage /> : <Navigate to="/" />}
           />
+          <Route path="/reset" element={<ResetPage />} />
 
           {/* Защищенные страницы */}
           <Route
@@ -45,6 +48,10 @@ function App() {
           />
 
           {/* Заглушки, чтобы не было пустых страниц при клике в меню */}
+          <Route
+            path="/explore"
+            element={token ? <ExplorePage /> : <Navigate to="/login" />}
+          />
           <Route
             path="/profile"
             element={token ? <div>Profile Page</div> : <Navigate to="/login" />}

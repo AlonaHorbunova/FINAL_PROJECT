@@ -7,6 +7,9 @@ import {
   ListItemIcon,
   ListItemText,
   Typography,
+  Drawer,
+  TextField,
+  Divider,
 } from "@mui/material";
 import {
   Home,
@@ -19,9 +22,9 @@ import {
   ExitToApp,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { useAppDispatch } from "../../redux/hooks"; // Путь на два уровня вверх к хукам
-import { logout } from "../../redux/auth/authSlice"; // Путь к слайсу
-import CreatePostModal from "../Posts/CreatePostModal"; // Импортируем нашу модалку создания поста
+import { useAppDispatch } from "../../redux/hooks";
+import { logout } from "../../redux/auth/authSlice";
+import CreatePostModal from "../Posts/CreatePostModal";
 
 const menuItems = [
   { text: "Home", icon: <Home />, path: "/" },
@@ -37,71 +40,195 @@ const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  // Стейт для управления видимостью модального окна создания публикации
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [activePanel, setActivePanel] = useState<
+    "search" | "notifications" | null
+  >(null);
 
-  // Кастомный обработчик клика по меню
   const handleItemClick = (path: string, text: string) => {
     if (text === "Create") {
-      setIsModalOpen(true); // Перехватываем клик на "Create" и открываем модалку
-    } else {
-      navigate(path); // Для остальных пунктов меню стандартно переходим по ссылке
+      setIsModalOpen(true);
+      return;
     }
+
+    if (text === "Search") {
+      setActivePanel(activePanel === "search" ? null : "search");
+      return;
+    }
+
+    if (text === "Notifications") {
+      setActivePanel(activePanel === "notifications" ? null : "notifications");
+      return;
+    }
+
+    // Обычные страницы
+    setActivePanel(null);
+    navigate(path);
   };
 
   return (
     <>
+      {/* САТЕЛИЙНЫЙ САЙДБАР */}
       <Box
         sx={{
-          width: 240,
+          width: 244,
           borderRight: "1px solid #dbdbdb",
           height: "100vh",
           position: "fixed",
           left: 0,
           top: 0,
-          p: 2,
+          pt: "40px",
+          pb: "20px",
+          px: "25px",
           display: "flex",
           flexDirection: "column",
+          bgcolor: "background.paper",
+          zIndex: 1400,
+          boxSizing: "border-box",
         }}
       >
-        <Typography
-          variant="h5"
-          sx={{ mb: 4, fontFamily: "cursive", px: 2, fontWeight: "bold" }}
-        >
-          ICHGRAM
-        </Typography>
+        {/* ЛОГОТИП */}
+        <Box sx={{ px: "8px", mb: "30px" }}>
+          <img
+            src="/ichgram.png"
+            alt="ICHGRAM"
+            style={{
+              width: "103px",
+              height: "auto",
+              display: "block",
+            }}
+          />
+        </Box>
 
-        <List sx={{ flexGrow: 1 }}>
+        {/* ОСНОВНОЕ МЕНЮ */}
+        <List sx={{ flexGrow: 1, p: 0 }}>
           {menuItems.map((item) => (
             <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
               <ListItemButton
                 onClick={() => handleItemClick(item.path, item.text)}
-                sx={{ borderRadius: 2 }}
+                sx={{
+                  borderRadius: 2,
+                  px: "12px",
+                  bgcolor:
+                    (item.text === "Search" && activePanel === "search") ||
+                    (item.text === "Notifications" &&
+                      activePanel === "notifications")
+                      ? "#f2f2f2"
+                      : "transparent",
+                }}
               >
-                <ListItemIcon sx={{ color: "black" }}>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.text} />
+                <ListItemIcon sx={{ color: "black", minWidth: "40px" }}>
+                  {item.icon}
+                </ListItemIcon>
+                {/* ИСПРАВЛЕНО ТУТ: Стили передаются через главный sx */}
+                <ListItemText
+                  primary={item.text}
+                  sx={{
+                    "& .MuiListItemText-primary": {
+                      fontSize: "15px",
+                      fontWeight: "500",
+                    },
+                  }}
+                />
               </ListItemButton>
             </ListItem>
           ))}
         </List>
 
-        {/* Кнопка выхода внизу сайдбара */}
-        <List>
+        {/* КНОПКА ВЫХОДА ВНИЗУ */}
+        <List sx={{ p: 0 }}>
           <ListItem disablePadding>
             <ListItemButton
               onClick={() => dispatch(logout())}
-              sx={{ borderRadius: 2, color: "error.main" }}
+              sx={{ borderRadius: 2, px: "12px", color: "error.main" }}
             >
-              <ListItemIcon sx={{ color: "error.main" }}>
+              <ListItemIcon sx={{ color: "error.main", minWidth: "40px" }}>
                 <ExitToApp />
               </ListItemIcon>
-              <ListItemText primary="Logout" />
+              {/* ИСПРАВЛЕНО ТУТ: Стили передаются через главный sx */}
+              <ListItemText
+                primary="Logout"
+                sx={{
+                  "& .MuiListItemText-primary": {
+                    fontSize: "15px",
+                    fontWeight: "500",
+                  },
+                }}
+              />
             </ListItemButton>
           </ListItem>
         </List>
       </Box>
 
-      {/* Сама модалка. Будет рендериться на экране, когда isModalOpen станет true */}
+      {/* ШТОРКА ПОИСКА */}
+      <Drawer
+        anchor="left"
+        open={activePanel === "search"}
+        onClose={() => setActivePanel(null)}
+        variant="temporary"
+        sx={{
+          "& .MuiBackdrop-root": { left: 244 },
+          "& .MuiDrawer-paper": {
+            width: 637,
+            pl: "274px",
+            pr: 4,
+            pt: 4,
+            borderRight: "1px solid #dbdbdb",
+            boxShadow: "none",
+            zIndex: 1300,
+          },
+        }}
+      >
+        <Typography variant="h5" sx={{ fontWeight: "bold", mb: 3 }}>
+          Поиск
+        </Typography>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Поиск"
+          size="small"
+          sx={{
+            bgcolor: "#efefef",
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": { border: "none" },
+            },
+            mb: 2,
+          }}
+        />
+        <Divider />
+        <Box sx={{ mt: 2, color: "gray", fontSize: "0.9rem" }}>
+          Недавние запросы отсутствуют.
+        </Box>
+      </Drawer>
+
+      {/* ШТОРКА УВЕДОМЛЕНИЙ */}
+      <Drawer
+        anchor="left"
+        open={activePanel === "notifications"}
+        onClose={() => setActivePanel(null)}
+        variant="temporary"
+        sx={{
+          "& .MuiBackdrop-root": { left: 244 },
+          "& .MuiDrawer-paper": {
+            width: 637,
+            pl: "274px",
+            pr: 4,
+            pt: 4,
+            borderRight: "1px solid #dbdbdb",
+            boxShadow: "none",
+            zIndex: 1300,
+          },
+        }}
+      >
+        <Typography variant="h5" sx={{ fontWeight: "bold", mb: 3 }}>
+          Уведомления
+        </Typography>
+        <Divider />
+        <Box sx={{ mt: 2, color: "gray", fontSize: "0.9rem" }}>
+          Здесь будут отображаться лайки и комментарии.
+        </Box>
+      </Drawer>
+
       <CreatePostModal
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}

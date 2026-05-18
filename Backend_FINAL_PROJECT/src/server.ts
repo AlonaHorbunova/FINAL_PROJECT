@@ -16,6 +16,7 @@ import notificationRoutes from "./routes/notification.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import messageRoutes from "./routes/message.routes.js";
 import path from "path";
+import { fileURLToPath } from "url"; // Добавили стандартный модуль для работы с URL
 
 const startServer = (): void => {
   const app: Application = express();
@@ -30,16 +31,20 @@ const startServer = (): void => {
 
   app.get("/", (req: Request, res: Response) => res.send("Я родился!"));
 
+  // ИСПРАВЛЕНИЕ: Безопасный способ получить путь к текущей папке в ES-модулях без __dirname
+  const __filename = fileURLToPath(import.meta.url);
+  const currentDir = path.dirname(__filename);
+
+  // Теперь раздаем статику, используя правильную переменную currentDir
   app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   app.use("/api/auth", authRoutes);
   app.use("/api/posts", postsRoutes);
   app.use("/api/likes", likeRoutes);
-  app.use("/api/comments", commentRoutes); // Добавлено
-  app.use("/api/notifications", notificationRoutes); // Добавлено
+  app.use("/api/comments", commentRoutes);
+  app.use("/api/notifications", notificationRoutes);
   app.use("/api/users", userRoutes);
   app.use("/api/messages", messageRoutes);
-  app.use("/uploads", express.static("uploads"));
 
   app.use(notFound);
   app.use(errorHandler);

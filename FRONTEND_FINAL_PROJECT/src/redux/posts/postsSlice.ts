@@ -3,6 +3,9 @@ import axiosInstance from "../../api/axiosInstance";
 import { IPost } from "../../types/index";
 import { AxiosError } from "axios";
 
+// Реэкспортируем тип наружу для компонентов, чтобы не запутаться в путях импорта
+export type { IPost };
+
 interface PostsState {
   items: IPost[];
   loading: boolean;
@@ -15,13 +18,14 @@ const initialState: PostsState = {
   error: null,
 };
 
-// 1. Экшен для получения всех постов (твой существующий)
-export const fetchPosts = createAsyncThunk(
+// 1. Явно указываем типы для thunk: <ЧтоВозвращаем, ЧтоПринимаем> -> <IPost[], void>
+export const fetchPosts = createAsyncThunk<IPost[], void>(
   "posts/fetchPosts",
   async (_, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.get("/posts");
-      return response.data;
+      // Принудительно кастим к IPost[], чтобы убрать ошибку inferred type в консоли
+      return response.data as IPost[];
     } catch (err: unknown) {
       const error = err as AxiosError<{ message: string }>;
       return rejectWithValue(
@@ -31,18 +35,17 @@ export const fetchPosts = createAsyncThunk(
   },
 );
 
-// 2. НОВЫЙ ЭКШЕН: Создание поста (принимает FormData с картинкой и описанием)
-export const addPost = createAsyncThunk(
+// 2. Точно так же типизируем добавление поста: <IPost, FormData>
+export const addPost = createAsyncThunk<IPost, FormData>(
   "posts/addPost",
   async (formData: FormData, { rejectWithValue }) => {
     try {
-      // Передаем третьим аргументом объект конфигурации с headers
       const response = await axiosInstance.post("/posts", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
-      return response.data; // Бэкенд возвращает populatedPost
+      return response.data as IPost;
     } catch (err: unknown) {
       const error = err as AxiosError<{ message: string }>;
       return rejectWithValue(
@@ -58,7 +61,6 @@ const postsSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      // Кейсы для загрузки постов
       .addCase(fetchPosts.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -71,16 +73,12 @@ const postsSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
-
-      // Кейсы для добавления поста
       .addCase(addPost.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(addPost.fulfilled, (state, action) => {
         state.loading = false;
-        // Ключевой момент инстаграм-логики:
-        // Добавляем созданный пост в НАЧАЛО массива (items), чтобы юзер сразу увидел его первым в ленте!
         state.items.unshift(action.payload);
       })
       .addCase(addPost.rejected, (state, action) => {
