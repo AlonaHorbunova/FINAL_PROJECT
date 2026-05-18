@@ -7,6 +7,7 @@ import HomePage from "./pages/HomePage";
 import ExplorePage from "./pages/ExplorePage";
 import { useAppSelector } from "./redux/hooks";
 import ResetPage from "./pages/ResetPage";
+import ProfilePage from "./pages/ProfilePage";
 
 function App() {
   const { token } = useAppSelector((state) => state.auth);
@@ -52,9 +53,16 @@ function App() {
             path="/explore"
             element={token ? <ExplorePage /> : <Navigate to="/login" />}
           />
+          {/* Роут для твоего личного профиля */}
           <Route
             path="/profile"
-            element={token ? <div>Profile Page</div> : <Navigate to="/login" />}
+            element={token ? <ProfilePage /> : <Navigate to="/login" />}
+          />
+
+          {/* Роут для просмотра чужих профилей по ID */}
+          <Route
+            path="/profile/:id"
+            element={token ? <ProfilePage /> : <Navigate to="/login" />}
           />
           <Route
             path="/messages"

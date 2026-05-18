@@ -11,13 +11,14 @@ interface AuthRequest extends Request {
   file?: Express.Multer.File;
 }
 
+// 1. Получить все посты (ВОЗВРАЩАЕМ К ПОЛЮ author)
 export const getAllPosts = async (
   _req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    // Просто забираем посты и подтягиваем информацию об их авторах
+    // Подтягиваем информацию об авторах строго через поле "author", как в твоей схеме
     const posts = await Post.find()
       .populate("author", "username avatar")
       .sort({ createdAt: -1 });
@@ -28,6 +29,7 @@ export const getAllPosts = async (
   }
 };
 
+// 2. Создать новый пост
 export const createPost = async (
   req: AuthRequest,
   res: Response,
@@ -44,39 +46,56 @@ export const createPost = async (
       throw new CustomError("Недостаточно прав", 401);
     }
 
-    // Определяем папку. Давай использовать 'uploads' в корне, как договаривались
-    const uploadDir = "uploads";
-    const fileName = `post-${Date.now()}.webp`;
+    // Абсолютный путь к корневой папке uploads
+    const uploadDir = path.join(process.cwd(), "uploads");
+    const fileName = `post-${req.user.id}-${Date.now()}.webp`;
     const outputPath = path.join(uploadDir, fileName);
 
-    // Создаем папку, если забыли
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    // SHARP: Берем буфер из памяти, сжимаем и сохраняем на диск
+    // Сжатие изображения
     await sharp(req.file.buffer)
-      .resize(1080, 1080, { fit: "cover" }) // 'cover' лучше для Инстаграма (заполнит квадрат)
+      .resize(1080, 1080, { fit: "cover" })
       .webp({ quality: 80 })
       .toFile(outputPath);
 
-    // Сохраняем в базу
-    const newPost = new Post({
-      author: req.user.id, // вместо user
-      imageUrl: `/uploads/${fileName}`, // вместо image
+    console.log("Попытка сохранить пост с данными:", {
+      author: req.user.id,
+      imageUrl: `/uploads/${fileName}`,
       caption,
     });
 
+    // Сохранение записи строго по схеме (author и imageUrl)
+    const newPost = new Post({
+      author: req.user.id,
+      imageUrl: `/uploads/${fileName}`,
+      caption:
+        typeof caption === "string" && caption !== "undefined"
+          ? caption.trim()
+          : "",
+    });
+
     await newPost.save();
+
+    // Подтягиваем автора для ответа
     const populatedPost = await Post.findById(newPost._id).populate(
       "author",
       "username avatar",
     );
-    // Сокеты
-    const io = req.app.get("io");
-    if (io)
-      io.emit("new_post", { message: "Новый пост!", post: populatedPost });
 
+    // БЕЗОПАСНЫЙ БЛОК СОКЕТОВ: падение сокетов больше не уронит сам контроллер
+    try {
+      const io = req.app.get("io");
+      if (io && populatedPost) {
+        io.emit("new_post", { message: "Новый post!", post: populatedPost });
+      }
+    } catch (socketError) {
+      console.error("Ошибка отправки события через Socket.io:", socketError);
+    }
+
+    // Гарантированно возвращаем успешный ответ на фронтенд
     res.status(201).json(populatedPost);
   } catch (error) {
     next(error);
