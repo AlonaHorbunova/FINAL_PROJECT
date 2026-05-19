@@ -3,9 +3,8 @@ import type { Response, NextFunction } from "express";
 import type { AuthRequest } from "../middlewares/authMiddleware.js";
 import { User } from "../db/models/User.js";
 import { CustomError } from "../utils/CustomError.js";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"; // ИЗМЕНЕНИЕ: Импорт AWS SDK вместо path и fs
 import sharp from "sharp";
-import path from "path";
-import fs from "fs";
 
 // Описываем строгий интерфейс для входящих текстовых полей формы
 interface UpdateProfileInput {
@@ -16,7 +15,18 @@ interface UpdateProfileInput {
   avatar?: string;
 }
 
-// 1. Получить профиль текущего (авторизованного) пользователя
+// ИЗМЕНЕНИЕ: Настройка клиента AWS S3 для работы с бакетом
+const s3 = new S3Client({
+  region: "eu-central-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+  },
+});
+
+const BUCKET_NAME = "my-finalproject-insta-bucket-2026";
+
+// 1. Получить профиль текущего (авторизованного) пользователя (БЕЗ ИЗМЕНЕНИЙ)
 export const getMe = async (
   req: AuthRequest,
   res: Response,
@@ -32,7 +42,7 @@ export const getMe = async (
   }
 };
 
-// 2. Получить профиль любого пользователя по его ID
+// 2. Получить профиль любого пользователя по его ID (БЕЗ ИЗМЕНЕНИЙ)
 export const getUserById = async (
   req: AuthRequest,
   res: Response,
@@ -62,13 +72,13 @@ export const updateProfile = async (
       throw new CustomError("Недостаточно прав", 401);
     }
 
-    // Безопасно забираем текстовые данные из тела запроса
+    // Безопасно забираем текстовые данные из тела запроса (БЕЗ ИЗМЕНЕНИЙ)
     const { username, fullName, bio, website } = req.body as UpdateProfileInput;
 
-    // Сборка объекта обновлений с типом Partial (без any!)
+    // Сборка объекта обновлений с типом Partial (без any!) (БЕЗ ИЗМЕНЕНИЙ)
     const updateData: Partial<UpdateProfileInput> = {};
 
-    // Записываем данные, только если это реальные строки и они не равны "undefined"
+    // Записываем данные, только если это реальные строки и они не равны "undefined" (БЕЗ ИЗМЕНЕНИЙ)
     if (
       typeof username === "string" &&
       username.trim() !== "" &&
@@ -86,42 +96,41 @@ export const updateProfile = async (
     if (typeof bio === "string" && bio.trim() !== "" && bio !== "undefined") {
       updateData.bio = bio.trim();
     }
-    if (
-      typeof website === "string" &&
-      website.trim() !== "" &&
-      website !== "undefined"
-    ) {
+    if (typeof website === "string" && website !== "undefined") {
       updateData.website = website.trim();
     }
 
     // Если в форме было прикреплено новое изображение (Аватарка)
     if (req.file) {
-      // УЧТЕНО: Сохраняем СТРОГО в папку public/uploads для аватарок
-      const uploadDir = path.join(process.cwd(), "public", "uploads");
-      const fileName = `avatar-${userId}-${Date.now()}.webp`;
-      const outputPath = path.join(uploadDir, fileName);
+      // ИЗМЕНЕНИЕ: Формируем имя файла для папки avatars внутри AWS S3
+      const fileName = `avatars/avatar-${userId}-${Date.now()}.webp`;
 
-      // Проверяем существование папки public/uploads, чтобы Sharp не упал
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      // Сжимаем аватарку в аккуратный квадрат 200x200
-      await sharp(req.file.buffer)
+      // ИЗМЕНЕНИЕ: Сжимаем аватарку в аккуратный квадрат 200x200 напрямую в буфер памяти
+      const optimizedAvatarBuffer = await sharp(req.file.buffer)
         .resize(200, 200, { fit: "cover" })
         .webp({ quality: 80 })
-        .toFile(outputPath);
+        .toBuffer();
 
-      // Записываем путь для базы данных (наш общий статический префикс)
-      updateData.avatar = `/uploads/${fileName}`;
+      // ИЗМЕНЕНИЕ: Отправляем сжатый буфер в облако Amazon S3
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: fileName,
+          Body: optimizedAvatarBuffer,
+          ContentType: "image/webp", // Чтобы браузер корректно рендерил картинку по ссылке
+        }),
+      );
+
+      // ИЗМЕНЕНИЕ: Записываем в базу данных полную прямую ссылку на AWS S3
+      updateData.avatar = `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/${fileName}`;
     }
 
-    // Если в итоге обновлять нечего
+    // Если в итоге обновлять нечего (БЕЗ ИЗМЕНЕНИЙ)
     if (Object.keys(updateData).length === 0) {
       throw new CustomError("Нет данных для обновления", 400);
     }
 
-    // Сохраняем все изменения в базу одной транзакцией
+    // Сохраняем все изменения в базу одной транзакцией (БЕЗ ИЗМЕНЕНИЙ)
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $set: updateData },

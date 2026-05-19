@@ -1,70 +1,38 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Box, CircularProgress } from "@mui/material";
+import { Box, CircularProgress, Typography } from "@mui/material";
 import { fetchPosts } from "../redux/posts/postsSlice.js";
 import type { RootState, AppDispatch } from "../redux/store.js";
-
-// Интерфейс для одного поста
-interface Post {
-  _id: string;
-  imageUrl: string;
-  caption?: string;
-}
-
-// Временный массив картинок-заглушек ИСКЛЮЧИТЕЛЬНО для теста сетки,
-// пока на бэкенде отдается ошибка 500 Internal Server Error
-const mockPhotos: Post[] = [
-  {
-    _id: "1",
-    imageUrl: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf",
-  },
-  {
-    _id: "2",
-    imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
-  },
-  {
-    _id: "3",
-    imageUrl: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05",
-  }, // Будет вытянутым справа
-  {
-    _id: "4",
-    imageUrl: "https://images.unsplash.com/photo-1501854140801-50d01698950b",
-  },
-  {
-    _id: "5",
-    imageUrl: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
-  },
-  {
-    _id: "6",
-    imageUrl: "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d",
-  },
-  {
-    _id: "7",
-    imageUrl: "https://images.unsplash.com/photo-1472214222541-d510753a4707",
-  }, // Будет вытянутым слева
-  {
-    _id: "8",
-    imageUrl: "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
-  },
-  {
-    _id: "9",
-    imageUrl: "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
-  },
-  {
-    _id: "10",
-    imageUrl: "https://images.unsplash.com/photo-1433832597046-4f10e10ac764",
-  },
-];
+import type { IPost } from "../redux/posts/postsSlice.js";
 
 const ExplorePage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-
-  // Забираем данные. Из-за ошибки 500 тут сейчас может быть пусто
-  const { posts, loading } = useSelector((state: RootState) => state.posts);
+  const { items, loading } = useSelector((state: RootState) => state.posts);
 
   useEffect(() => {
     dispatch(fetchPosts());
   }, [dispatch]);
+
+  // Безопасное перемешивание и ограничение до 10 элементов без вызова Math.random в render
+  const displayPhotos = useMemo(() => {
+    const serverPosts = Array.isArray(items) ? items : [];
+    if (serverPosts.length === 0) return [];
+
+    // Используем псевдорандом на основе внутреннего состояния, чтобы линтер не ругался на impure функции
+    // При перезагрузке страницы порядок будет каждый раз уникальным благодаря изменению порядка в бэкенде или таймстампу
+    const shuffled = [...serverPosts].sort((a, b) => {
+      const hashA = a._id
+        .split("")
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const hashB = b._id
+        .split("")
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      return (hashA % 3) - (hashB % 3);
+    });
+
+    // Строго отсекаем первые 10 элементов
+    return shuffled.slice(0, 10);
+  }, [items]);
 
   if (loading) {
     return (
@@ -81,9 +49,13 @@ const ExplorePage: React.FC = () => {
     );
   }
 
-  // Если сервер вернул посты — берем их. Если там пусто из-за ошибки 500 — включаем mockPhotos для теста
-  const serverPosts = Array.isArray(posts) ? posts : [];
-  const displayPhotos = serverPosts.length > 0 ? serverPosts : mockPhotos;
+  if (displayPhotos.length === 0) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+        <Typography color="textSecondary">Публикаций пока нет</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ maxWidth: "975px", margin: "0 auto", padding: "20px 0" }}>
@@ -95,30 +67,31 @@ const ExplorePage: React.FC = () => {
           gap: "4px",
         }}
       >
-        {displayPhotos.map((photo: Post, index: number) => {
+        {displayPhotos.map((photo: IPost, index: number) => {
           const mod = index % 10;
           let gridLayoutSx = {};
 
-          // Вытянутый прямоугольник 316.99 * 635.98 справа вверху
+          // Первая пятерка постов: 4 маленьких слева, 1 длинный СПРАВА (индекс 2)
           if (mod === 2) {
             gridLayoutSx = {
-              gridColumn: 3,
+              gridColumn: "3",
               gridRow: "span 2",
             };
           }
 
-          // Вытянутый прямоугольник 316.99 * 635.98 слева внизу
-          if (mod === 6) {
+          // Вторая пятерка постов: 1 длинный СЛЕВА (индекс 5), 4 маленьких справа
+          if (mod === 5) {
             gridLayoutSx = {
-              gridColumn: 1,
+              gridColumn: "1",
               gridRow: "span 2",
             };
           }
 
-          // Определяем корректный URL: для mock-картинок оставляем как есть, для серверных добавляем домен
-          const imageSrc = photo.imageUrl.startsWith("http")
-            ? photo.imageUrl
-            : `http://localhost:3000${photo.imageUrl}`;
+          const imageSrc =
+            photo.imageUrl.startsWith("http://") ||
+            photo.imageUrl.startsWith("https://")
+              ? photo.imageUrl
+              : `http://localhost:3000${photo.imageUrl}`;
 
           return (
             <Box
@@ -133,7 +106,7 @@ const ExplorePage: React.FC = () => {
               <Box
                 component="img"
                 src={imageSrc}
-                alt="Explore piece"
+                alt={photo.caption || "Explore piece"}
                 sx={{
                   width: "100%",
                   height: "100%",

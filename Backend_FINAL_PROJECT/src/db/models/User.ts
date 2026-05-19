@@ -8,6 +8,7 @@ export interface IUser {
   password?: string;
   avatar?: string;
   bio?: string;
+  website?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -20,6 +21,7 @@ const userSchema = new Schema<IUser>(
     password: { type: String, required: true },
     avatar: { type: String, default: "" },
     bio: { type: String, default: "" },
+    website: { type: String, default: "" },
   },
   { timestamps: true },
 );
