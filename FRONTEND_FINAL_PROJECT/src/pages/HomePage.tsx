@@ -1,8 +1,10 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Typography, CircularProgress, Box, Link } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
-import { fetchPosts, IPost } from "../redux/posts/postsSlice";
+import { fetchPosts } from "../redux/posts/postsSlice";
+import { IPost } from "../types";
 import PostCard from "../components/Posts/PostCard";
+import PostDetailModal from "../components/Posts/PostDetailModal";
 
 type SafePost = IPost & {
   id?: string | number;
@@ -13,6 +15,14 @@ const HomePage: React.FC = () => {
   const dispatch = useAppDispatch();
   const { items, loading, error } = useAppSelector((state) => state.posts);
   const posts = items as SafePost[];
+
+  const [selectedPost, setSelectedPost] = useState<IPost | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleOpenModal = (post: IPost) => {
+    setSelectedPost(post);
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     dispatch(fetchPosts());
@@ -25,11 +35,10 @@ const HomePage: React.FC = () => {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        bgcolor: "#ffffff", // Чистый белый фон для всей страницы
+        bgcolor: "#ffffff",
         boxSizing: "border-box",
       }}
     >
-      {/* ОСНОВНОЙ КОНТЕНТ */}
       <Box
         component="main"
         sx={{
@@ -84,7 +93,10 @@ const HomePage: React.FC = () => {
                 `post-idx-${index}`;
               return (
                 <Box key={postKey} sx={{ width: "404px" }}>
-                  <PostCard post={post as IPost} />
+                  <PostCard
+                    post={post as IPost}
+                    onOpenModal={handleOpenModal}
+                  />
                 </Box>
               );
             })}
@@ -92,7 +104,6 @@ const HomePage: React.FC = () => {
         )}
       </Box>
 
-      {/* ФУТЕР */}
       <Box
         component="footer"
         sx={{
@@ -147,6 +158,13 @@ const HomePage: React.FC = () => {
           © {new Date().getFullYear()} ICHGRAM FROM ICH PRO
         </Typography>
       </Box>
+
+      {/* ИСПРАВЛЕНО: Свойство называется open */}
+      <PostDetailModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        post={selectedPost}
+      />
     </Box>
   );
 };

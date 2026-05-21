@@ -17,14 +17,14 @@ import {
 } from "../redux/user/userSlice";
 import { fetchPosts } from "../redux/posts/postsSlice";
 import EditProfileModal from "../components/Profile/EditProfileModal";
-import { IUser, IPost } from "../types"; // Импортируем общие типы
+import PostDetailModal from "../components/Posts/PostDetailModal";
+import { IUser, IPost } from "../types";
 
 const ProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  // Типизируем селектор явно через state
   const {
     profileUser,
     loading: userLoading,
@@ -49,7 +49,14 @@ const ProfilePage: React.FC = () => {
 
   const [isEditOpen, setIsEditOpen] = useState(false);
 
-  // Проверяем подписку
+  const [selectedPost, setSelectedPost] = useState<IPost | null>(null);
+  const [isPostModalOpen, setIsPostModalOpen] = useState(false);
+
+  const handleOpenPostModal = (post: IPost) => {
+    setSelectedPost(post);
+    setIsPostModalOpen(true);
+  };
+
   const isFollowing = profileUser?.followers?.includes(myProfile?._id || "");
 
   useEffect(() => {
@@ -77,14 +84,10 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // Фильтруем посты автора, используя IPost
   const userPosts = allPosts.filter((post: IPost) => {
     if (!post.author) return false;
-
-    // Получаем ID автора корректно в зависимости от того, объект это или строка
     const postAuthorId =
       typeof post.author === "object" ? post.author._id : post.author;
-
     return postAuthorId === profileUser?._id;
   });
 
@@ -356,12 +359,14 @@ const ProfilePage: React.FC = () => {
               {userPosts.map((post) => (
                 <Box
                   key={post._id}
+                  onClick={() => handleOpenPostModal(post)}
                   sx={{
                     position: "relative",
                     width: "100%",
                     aspectRatio: "1/1",
                     bgcolor: "#efefef",
                     overflow: "hidden",
+                    cursor: "pointer",
                   }}
                 >
                   <Box
@@ -381,11 +386,20 @@ const ProfilePage: React.FC = () => {
         )}
       </Box>
 
-      <EditProfileModal
-        isOpen={isEditOpen}
-        onClose={() => setIsEditOpen(false)}
-        currentUser={profileUser}
-        onSave={handleSaveProfile}
+      {profileUser && (
+        <EditProfileModal
+          key={profileUser.username}
+          isOpen={isEditOpen}
+          onClose={() => setIsEditOpen(false)}
+          currentUser={profileUser}
+          onSave={handleSaveProfile}
+        />
+      )}
+
+      <PostDetailModal
+        open={isPostModalOpen}
+        onClose={() => setIsPostModalOpen(false)}
+        post={selectedPost}
       />
     </Box>
   );

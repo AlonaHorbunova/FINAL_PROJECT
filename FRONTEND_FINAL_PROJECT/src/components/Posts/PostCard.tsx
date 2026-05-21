@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom"; // ИМПОРТИРУЕМ NAVIGATE
 import {
   Card,
   CardHeader,
@@ -23,11 +24,12 @@ import { toggleLikePost } from "../../redux/posts/postsSlice";
 
 interface PostCardProps {
   post: IPost;
-  onOpenModal: (post: IPost) => void;
+  onOpenModal?: (post: IPost) => void;
 }
 
 const PostCard: React.FC<PostCardProps> = ({ post, onOpenModal }) => {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate(); // ИНИЦИАЛИЗИРУЕМ НАВИГАЦИЮ
   const BACKEND_URL = "http://localhost:3000";
 
   const currentUser = useAppSelector((state) => state.auth.user);
@@ -42,6 +44,20 @@ const PostCard: React.FC<PostCardProps> = ({ post, onOpenModal }) => {
       return;
     }
     dispatch(toggleLikePost({ postId: post._id, userId: currentUser._id }));
+  };
+
+  // Метод для перехода на профиль автора
+  const handleNavigateToProfile = () => {
+    const authorId =
+      typeof post.author === "object" ? post.author?._id : post.author;
+    if (!authorId) return;
+
+    // Если это наш собственный пост — ведем на наш профиль, иначе на чужой
+    if (authorId === currentUser?._id) {
+      navigate("/profile");
+    } else {
+      navigate(`/profile/${authorId}`);
+    }
   };
 
   const getFullUrl = (urlPath: string | undefined) => {
@@ -71,7 +87,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, onOpenModal }) => {
           <Avatar
             src={authorAvatar}
             alt={authorName}
-            sx={{ width: 32, height: 32, bgcolor: "#efefef" }}
+            onClick={handleNavigateToProfile} // ПЕРЕХОД ПО КЛИКУ НА АВАТАР
+            sx={{
+              width: 32,
+              height: 32,
+              bgcolor: "#efefef",
+              cursor: "pointer",
+            }}
           >
             {authorName[0]?.toUpperCase()}
           </Avatar>
@@ -82,7 +104,15 @@ const PostCard: React.FC<PostCardProps> = ({ post, onOpenModal }) => {
           </IconButton>
         }
         title={
-          <Typography sx={{ fontWeight: 600, fontSize: "0.9rem" }}>
+          <Typography
+            onClick={handleNavigateToProfile} // ПЕРЕХОД ПО КЛИКУ НА ИМЯ
+            sx={{
+              fontWeight: 600,
+              fontSize: "0.9rem",
+              cursor: "pointer",
+              "&:hover": { textDecoration: "underline" },
+            }}
+          >
             {authorName}
           </Typography>
         }
@@ -94,7 +124,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onOpenModal }) => {
           component="img"
           image={postImageUrl}
           alt="Публикация"
-          onClick={() => onOpenModal(post)}
+          onClick={() => onOpenModal && onOpenModal(post)}
           sx={{
             width: "100%",
             aspectRatio: "1 / 1",
@@ -116,10 +146,16 @@ const PostCard: React.FC<PostCardProps> = ({ post, onOpenModal }) => {
               <FavoriteBorderIcon sx={{ color: "#262626" }} />
             )}
           </IconButton>
-          <IconButton onClick={() => onOpenModal(post)}>
+          <IconButton onClick={() => onOpenModal && onOpenModal(post)}>
             <ChatBubbleOutlineIcon sx={{ color: "#262626" }} />
           </IconButton>
-          <IconButton>
+          <IconButton
+            onClick={() =>
+              navigate(
+                `/messages?targetId=${typeof post.author === "object" ? post.author?._id : post.author}`,
+              )
+            }
+          >
             <PaperPlaneIcon sx={{ color: "#262626" }} />
           </IconButton>
         </Box>
@@ -137,7 +173,16 @@ const PostCard: React.FC<PostCardProps> = ({ post, onOpenModal }) => {
           variant="body2"
           sx={{ color: "#262626", fontSize: "0.9rem", lineHeight: "1.4" }}
         >
-          <Box component="span" sx={{ fontWeight: 600, mr: 1 }}>
+          <Box
+            component="span"
+            onClick={handleNavigateToProfile} // ПЕРЕХОД ИЗ ОПИСАНИЯ ПОСТА
+            sx={{
+              fontWeight: 600,
+              mr: 1,
+              cursor: "pointer",
+              "&:hover": { textDecoration: "underline" },
+            }}
+          >
             {authorName}
           </Box>
           {post.caption}

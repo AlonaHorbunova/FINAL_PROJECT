@@ -1,7 +1,9 @@
 import type { Request, Response, NextFunction } from "express";
 import { Post } from "../db/models/Post.js";
+import { Like } from "../db/models/Like.js"; // Добавили модель лайков для склейки
+import { Comment } from "../db/models/Comment.js"; // Добавили модель комментов для склейки
 import { CustomError } from "../utils/CustomError.js";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"; // ИЗМЕНЕНИЕ: Импорт AWS SDK
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import sharp from "sharp";
 
 // Расширяем интерфейс, чтобы TS видел и пользователя, и файл от multer
@@ -10,7 +12,7 @@ interface AuthRequest extends Request {
   file?: Express.Multer.File;
 }
 
-// ИЗМЕНЕНИЕ: Инициализация клиента AWS S3 (использует переменные из .env)
+// Инициализация клиента AWS S3 (использует переменные из .env)
 const s3 = new S3Client({
   region: "eu-central-1",
   credentials: {
@@ -21,24 +23,46 @@ const s3 = new S3Client({
 
 const BUCKET_NAME = "my-finalproject-insta-bucket-2026";
 
-// 1. Получить все посты (БЕЗ ИЗМЕНЕНИЙ)
+// 1. Получить все постов (С полной агрегацией лайков и комментариев)
 export const getAllPosts = async (
   _req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
+    // Вытаскиваем сначала сами посты
     const posts = await Post.find()
       .populate("author", "username avatar")
       .sort({ createdAt: -1 });
 
-    res.json(posts);
+    // Склеиваем каждый пост с его лайками и комментариями из соседних коллекций
+    const postsWithDetails = await Promise.all(
+      posts.map(async (post) => {
+        // Находим лайки к посту и собираем строковые ID пользователей
+        const likesDocs = await Like.find({ post: post._id });
+        const likes = likesDocs.map((like) => like.user.toString());
+
+        // Находим комменты к посту и сразу наполняем их данными авторов (username, avatar)
+        const comments = await Comment.find({ post: post._id })
+          .populate("user", "username avatar")
+          .sort({ createdAt: 1 }); // Хронологический порядок (старые вверху, новые внизу)
+
+        // Возвращаем пост, подмешивая актуальные массивы лайков и комментов
+        return {
+          ...post.toObject(),
+          likes: likes,
+          comments: comments,
+        };
+      }),
+    );
+
+    res.json(postsWithDetails);
   } catch (error) {
     next(error);
   }
 };
 
-// 2. Создать новый пост
+// 2. Создать новый пост (Твоя оригинальная логика с AWS S3 и Sharp)
 export const createPost = async (
   req: AuthRequest,
   res: Response,
@@ -55,16 +79,16 @@ export const createPost = async (
       throw new CustomError("Недостаточно прав", 401);
     }
 
-    // ИЗМЕНЕНИЕ: Формируем имя ключа внутри бакета S3
+    // Формируем имя ключа внутри бакета S3
     const fileName = `uploads/post-${req.user.id}-${Date.now()}.webp`;
 
-    // ИЗМЕНЕНИЕ: Обрабатываем картинку через sharp прямо в буфер памяти (без сохранения на диск)
+    // Обрабатываем картинку через sharp прямо в буфер памяти (без сохранения на диск)
     const optimizedImageBuffer = await sharp(req.file.buffer)
       .resize(1080, 1080, { fit: "cover" })
       .webp({ quality: 80 })
       .toBuffer();
 
-    // ИЗМЕНЕНИЕ: Загрузка оптимизированного буфера в Amazon S3
+    // Загрузка оптимизированного буфера в Amazon S3
     await s3.send(
       new PutObjectCommand({
         Bucket: BUCKET_NAME,
@@ -74,7 +98,7 @@ export const createPost = async (
       }),
     );
 
-    // ИЗМЕНЕНИЕ: Ссылка теперь указывает на облако AWS
+    // Ссылка теперь указывает на облако AWS
     const s3ImageUrl = `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/${fileName}`;
 
     console.log("Попытка сохранить пост с данными в AWS:");
@@ -82,7 +106,7 @@ export const createPost = async (
     // Сохранение записи строго по схеме
     const newPost = new Post({
       author: req.user.id,
-      imageUrl: s3ImageUrl, // ИЗМЕНЕНИЕ: Передаем ссылку на S3
+      imageUrl: s3ImageUrl,
       caption:
         typeof caption === "string" && caption !== "undefined"
           ? caption.trim()
@@ -97,7 +121,7 @@ export const createPost = async (
       "username avatar",
     );
 
-    // БЕЗОПАСНЫЙ БЛОК СОКЕТОВ (БЕЗ ИЗМЕНЕНИЙ)
+    // БЕЗОПАСНЫЙ БЛОК СОКЕТОВ
     try {
       const io = req.app.get("io");
       if (io && populatedPost) {

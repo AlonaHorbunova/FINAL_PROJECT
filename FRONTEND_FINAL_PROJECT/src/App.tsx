@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { CssBaseline, Box } from "@mui/material";
-import { io } from "socket.io-client"; // Импортируем клиент
 import Sidebar from "./components/Layout/Sidebar";
 import RegisterPage from "./pages/RegisterPage";
 import LoginPage from "./pages/LoginPage";
@@ -13,9 +12,7 @@ import ProfilePage from "./pages/ProfilePage";
 import { addMessage } from "./redux/chat/chatSlice"; // Импортируй свой редюсер
 import MessagesPage from "./pages/MessagesPage";
 import { getMe } from "./redux/auth/authSlice";
-
-// Инициализируем сокет вне компонента
-const socket = io("http://localhost:3000");
+import { socket } from "./api/socket";
 
 function App() {
   const { token, user } = useAppSelector((state) => state.auth);

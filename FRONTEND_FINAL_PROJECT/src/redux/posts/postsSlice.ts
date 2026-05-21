@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "../../api/axiosInstance";
-import { IPost } from "../../types/index";
+import { likePostApi } from "../../api/likes";
+import { addCommentApi } from "../../api/comments"; // 1. Импортируем функцию из апи
+import { IPost, IComment } from "../../types/index"; // 2. Импортируем интерфейс комментария напрямую из типов
 import { AxiosError } from "axios";
 
 interface PostsState {
@@ -39,8 +41,8 @@ export const toggleLikePost = createAsyncThunk<
   { rejectValue: string }
 >("posts/toggleLikePost", async ({ postId, userId }, { rejectWithValue }) => {
   try {
-    const response = await axiosInstance.post(`/likes/${postId}`);
-    return { postId, liked: response.data.liked, userId };
+    const data = await likePostApi(postId);
+    return { postId, liked: data.liked, userId };
   } catch (err: unknown) {
     const error = err as AxiosError<{ message: string }>;
     return rejectWithValue(error.response?.data?.message || "Ошибка лайка");
@@ -65,22 +67,24 @@ export const addPost = createAsyncThunk<
     );
   }
 });
+
+// 4. Добавление комментария (Исправленный экшен)
 export const addComment = createAsyncThunk<
-  { postId: string; comment: unknown },
+  { postId: string; comment: IComment }, // <-- Заменили unknown на тип IComment
   { postId: string; text: string },
   { rejectValue: string }
->(
-  "posts/addComment",
-  async ({ postId, text }, { rejectWithValue }) => {
-    try {
-      const response = await axiosInstance.post(`/comments/${postId}`, { text });
-      return { postId, comment: response.data };
-    } catch (err: unknown) {
-      const error = err as AxiosError<{ message: string }>;
-      return rejectWithValue(error.response?.data?.message || "Ошибка добавления комментария");
-    }
+>("posts/addComment", async ({ postId, text }, { rejectWithValue }) => {
+  try {
+    // Используем нашу функцию из папки api
+    const data = await addCommentApi(postId, text);
+    return { postId, comment: data as IComment }; // Приводим к типу IComment
+  } catch (err: unknown) {
+    const error = err as AxiosError<{ message: string }>;
+    return rejectWithValue(
+      error.response?.data?.message || "Ошибка добавления комментария",
+    );
   }
-);
+});
 
 const postsSlice = createSlice({
   name: "posts",
@@ -118,13 +122,13 @@ const postsSlice = createSlice({
           }
         }
       })
-      // Обработка addComment
+      // Обработка addComment (Теперь TypeScript ругаться не будет!)
       .addCase(addComment.fulfilled, (state, action) => {
         const { postId, comment } = action.payload;
         const post = state.items.find((p) => p._id === postId);
         if (post) {
           if (!post.comments) post.comments = [];
-          post.comments.push(comment);
+          post.comments.push(comment); // Ошибка на WritableDraft ушла!
         }
       });
   },

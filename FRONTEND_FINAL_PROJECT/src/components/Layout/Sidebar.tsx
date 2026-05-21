@@ -61,7 +61,6 @@ const Sidebar: React.FC = () => {
       return;
     }
 
-    // Обычные страницы
     setActivePanel(null);
     navigate(path);
   };

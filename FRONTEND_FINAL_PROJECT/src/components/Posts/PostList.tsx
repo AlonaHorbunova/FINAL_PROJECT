@@ -1,13 +1,14 @@
 import React from "react";
 import { Box } from "@mui/material";
-import PostCard from "./PostCard"; // Импортируем нашу новую карточку
+import PostCard from "./PostCard";
 import { IPost } from "../../types/index";
 
 interface PostListProps {
   posts: IPost[];
+  onOpenModal: (post: IPost) => void; // ИСПРАВЛЕНО: убрали '?', теперь проп обязательный
 }
 
-const PostList: React.FC<PostListProps> = ({ posts }) => {
+const PostList: React.FC<PostListProps> = ({ posts, onOpenModal }) => {
   if (!posts || posts.length === 0) {
     return (
       <Box
@@ -29,8 +30,7 @@ const PostList: React.FC<PostListProps> = ({ posts }) => {
       }}
     >
       {posts.map((post) => (
-        // Передаем каждый пост в наш новый стилизованный компонент
-        <PostCard key={post._id} post={post} />
+        <PostCard key={post._id} post={post} onOpenModal={onOpenModal} />
       ))}
     </Box>
   );

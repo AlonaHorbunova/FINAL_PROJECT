@@ -82,7 +82,6 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ open, onClose }) => {
           <CloseIcon />
         </IconButton>
 
-        {/* Заголовок — все стили строго внутри sx */}
         <Typography
           sx={{
             textAlign: "center",
@@ -146,7 +145,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ open, onClose }) => {
               </Box>
             )}
 
-            {/* Идеально типизированное текстовое поле нативного типа с автовысотой */}
+  
             <TextareaAutosize
               minRows={3}
               maxRows={6}
