@@ -9,7 +9,7 @@ export const sendMessage = async (
 ) => {
   try {
     const { chatId, receiver, text } = req.body;
-    const userId = req.user?.id; // Теперь это легально без 'as any' и без кастомных интерфейсов
+    const userId = req.user?.id;
 
     if (!userId) return res.status(401).json({ message: "Не авторизован" });
 
@@ -47,6 +47,42 @@ export const getChatMessages = async (
       .sort({ createdAt: 1 });
 
     res.json(messages);
+  } catch (error) {
+    next(error);
+  }
+};
+// Получить количество всех непрочитанных сообщений для юзера
+export const getUnreadCount = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = req.user?.id;
+    const count = await Message.countDocuments({
+      receiver: userId,
+      isRead: false,
+    });
+    res.json({ count });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Пометить сообщения в чате как прочитанные
+export const markAsRead = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { chatId } = req.params;
+    const userId = req.user?.id;
+    await Message.updateMany(
+      { chatId, receiver: userId, isRead: false },
+      { $set: { isRead: true } },
+    );
+    res.status(200).json({ message: "Messages marked as read" });
   } catch (error) {
     next(error);
   }

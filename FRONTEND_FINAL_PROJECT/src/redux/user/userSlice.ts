@@ -2,20 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "../../api/axiosInstance";
 import { AxiosError } from "axios";
 import axios from "axios";
-
-// Описываем интерфейс пользователя на основе полей из модели и макета
-export interface IUser {
-  _id: string;
-  id?: string;
-  username: string;
-  fullName?: string;
-  avatar?: string;
-  bio?: string;
-  website?: string;
-  postsCount?: number;
-  followersCount?: number;
-  followingCount?: number;
-}
+import { IUser } from "../../types";
 
 interface UserState {
   profileUser: IUser | null; // Пользователь, чей профиль мы сейчас смотрим (мы сами или чужой)
@@ -63,8 +50,6 @@ export const fetchUserById = createAsyncThunk<IUser, string>(
   },
 );
 
-// ВНЕДРЕНО: Экшен обновления профиля (PUT /api/users/update)
-// На вход принимает FormData, так как внутри будет находиться файл аватарки
 export const updateUserProfile = createAsyncThunk<IUser, FormData>(
   "user/updateUserProfile",
   async (formData, { rejectWithValue }) => {

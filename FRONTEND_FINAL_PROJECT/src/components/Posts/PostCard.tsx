@@ -10,27 +10,43 @@ import {
 } from "@mui/material";
 import {
   MoreVert as MoreVertIcon,
+  Favorite as FavoriteIcon,
   FavoriteBorder as FavoriteBorderIcon,
-  ChatBubbleOutlined as ChatBubbleOutlineIcon, // Вот здесь изменили Outline на Outlined
+  ChatBubbleOutlined as ChatBubbleOutlineIcon,
   Send as PaperPlaneIcon,
   BookmarkBorder as BookmarkBorderIcon,
 } from "@mui/icons-material";
 import { Box } from "@mui/system";
 import { IPost } from "../../types/index";
+import { useAppDispatch, useAppSelector } from "../../redux/hooks";
+import { toggleLikePost } from "../../redux/posts/postsSlice";
 
 interface PostCardProps {
   post: IPost;
+  onOpenModal: (post: IPost) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, onOpenModal }) => {
+  const dispatch = useAppDispatch();
   const BACKEND_URL = "http://localhost:3000";
 
-  // УМНАЯ СБОРКА URL КАРТИНКИ ПОСТА
+  const currentUser = useAppSelector((state) => state.auth.user);
+
+  const isLiked = currentUser
+    ? (post.likes || []).includes(currentUser._id)
+    : false;
+
+  const handleLike = () => {
+    if (!currentUser?._id) {
+      console.error("Лайк невозможен: пользователь не авторизован");
+      return;
+    }
+    dispatch(toggleLikePost({ postId: post._id, userId: currentUser._id }));
+  };
+
   const getFullUrl = (urlPath: string | undefined) => {
     if (!urlPath) return "";
-    // Если бэкенд почему-то уже прислал полный URL с http, оставляем его
     if (urlPath.startsWith("http")) return urlPath;
-    // Если путь начинается со слэша, а мы его добавляем — убираем дублирование
     const cleanPath = urlPath.startsWith("/") ? urlPath : `/${urlPath}`;
     return `${BACKEND_URL}${cleanPath}`;
   };
@@ -50,7 +66,6 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
         boxShadow: "none",
       }}
     >
-      {/* Шапка поста: Аватарка и Никнейм */}
       <CardHeader
         avatar={
           <Avatar
@@ -58,7 +73,7 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
             alt={authorName}
             sx={{ width: 32, height: 32, bgcolor: "#efefef" }}
           >
-            {authorName[0].toUpperCase()}
+            {authorName[0]?.toUpperCase()}
           </Avatar>
         }
         action={
@@ -74,30 +89,34 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
         sx={{ p: 1.5 }}
       />
 
-      {/* Изображение поста (Идеальный квадрат как в макете) */}
       {postImageUrl && (
         <CardMedia
           component="img"
           image={postImageUrl}
           alt="Публикация"
+          onClick={() => onOpenModal(post)}
           sx={{
             width: "100%",
-            aspectRatio: "1 / 1", // Делает картинку строго квадратной
-            objectFit: "cover", // Красиво вписывает изображение
+            aspectRatio: "1 / 1",
+            objectFit: "cover",
             bgcolor: "#fafafa",
+            cursor: "pointer",
           }}
         />
       )}
 
-      {/* Блок иконок взаимодействия (Лайк, Коммент, Директ, Закладка) */}
       <Box
         sx={{ display: "flex", justifyContent: "space-between", px: 1, pt: 1 }}
       >
         <Box>
-          <IconButton>
-            <FavoriteBorderIcon sx={{ color: "#262626" }} />
+          <IconButton onClick={handleLike}>
+            {isLiked ? (
+              <FavoriteIcon sx={{ color: "#ed4956" }} />
+            ) : (
+              <FavoriteBorderIcon sx={{ color: "#262626" }} />
+            )}
           </IconButton>
-          <IconButton>
+          <IconButton onClick={() => onOpenModal(post)}>
             <ChatBubbleOutlineIcon sx={{ color: "#262626" }} />
           </IconButton>
           <IconButton>
@@ -109,13 +128,11 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
         </IconButton>
       </Box>
 
-      {/* Количество лайков (захардкожено пока для красоты макета или берем из массива) */}
       <CardContent sx={{ px: 2, py: 0.5, "&:last-child": { pb: 2 } }}>
         <Typography sx={{ fontWeight: 600, fontSize: "0.9rem", mb: 0.5 }}>
           {post.likes?.length || 0} отметок "Нравится"
         </Typography>
 
-        {/* Текст поста: Никнейм автора + Описание */}
         <Typography
           variant="body2"
           sx={{ color: "#262626", fontSize: "0.9rem", lineHeight: "1.4" }}

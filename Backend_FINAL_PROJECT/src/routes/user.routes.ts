@@ -8,14 +8,17 @@ import {
   getUserById,
   updateProfile,
 } from "../controllers/user.controller.js";
+import { followUser } from "../controllers/user.controller.js";
 
 const router = Router();
 
-// 1. Получить данные своего профиля
 router.get("/me", authMiddleware as RequestHandler, getMe as RequestHandler);
+router.post(
+  "/follow/:id",
+  authMiddleware as RequestHandler,
+  followUser as RequestHandler,
+);
 
-// 2. Универсальное обновление профиля (данные + аватарка)
-// ВАЖНО: Добавили upload.single("avatar"), чтобы multer ловил файл из формы
 router.put(
   "/update",
   authMiddleware as RequestHandler,

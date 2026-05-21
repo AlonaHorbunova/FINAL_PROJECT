@@ -67,6 +67,22 @@ export const registerUser = createAsyncThunk<
     return rejectWithValue("Непредвиденная ошибка");
   }
 });
+export const getMe = createAsyncThunk<IUser, void, { rejectValue: string }>(
+  "auth/getMe",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.get<IUser>("/auth/me");
+      return response.data;
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        return rejectWithValue(
+          err.response?.data?.message || "Ошибка получения профиля",
+        );
+      }
+      return rejectWithValue("Непредвиденная ошибка");
+    }
+  },
+);
 
 const authSlice = createSlice({
   name: "auth",
@@ -110,6 +126,9 @@ const authSlice = createSlice({
       .addCase(registerUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload ?? "Ошибка регистрации";
+      })
+      .addCase(getMe.fulfilled, (state, action) => {
+        state.user = action.payload;
       });
   },
 });

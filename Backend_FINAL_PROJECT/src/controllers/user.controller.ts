@@ -146,3 +146,24 @@ export const updateProfile = async (
     next(error);
   }
 };
+export const followUser = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const myId = req.user?.id;
+    const { id: targetId } = req.params;
+
+    if (myId === targetId)
+      throw new CustomError("Нельзя подписаться на самого себя", 400);
+
+    // Добавляем ID в массивы (подразумевается, что у тебя в модели User есть эти поля)
+    await User.findByIdAndUpdate(myId, { $addToSet: { following: targetId } });
+    await User.findByIdAndUpdate(targetId, { $addToSet: { followers: myId } });
+
+    res.json({ message: "Успешная подписка" });
+  } catch (error) {
+    next(error);
+  }
+};

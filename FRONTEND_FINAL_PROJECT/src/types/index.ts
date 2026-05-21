@@ -2,7 +2,13 @@
 export interface IUser {
   _id: string;
   username: string;
-  avatar?: string; // аватарка может быть, а может и нет
+  avatar?: string;
+  bio?: string;
+  website?: string;
+  followers?: string[]; // массив ID подписчиков
+  following?: string[]; // массив ID тех, на кого подписан
+  followersCount?: number;
+  followingCount?: number;
 }
 
 // 2. Обновим комментарий (теперь мы знаем, кто его написал)
