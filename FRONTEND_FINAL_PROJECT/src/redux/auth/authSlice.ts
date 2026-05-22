@@ -17,12 +17,16 @@ interface AuthState {
 
 const initialState: AuthState = {
   user: null,
-  token: localStorage.getItem("token"),
+  // ВАЖНО: Проверяем, чтобы токен не был строкой "undefined"
+  token:
+    localStorage.getItem("token") === "undefined"
+      ? null
+      : localStorage.getItem("token"),
   loading: false,
   error: null,
 };
 
-// 1. Экшен для ЛОГИНА
+// 1. ЛОГИН
 export const loginUser = createAsyncThunk<
   AuthResponse,
   Record<string, string>,
@@ -36,16 +40,13 @@ export const loginUser = createAsyncThunk<
     localStorage.setItem("token", response.data.token);
     return response.data;
   } catch (err: unknown) {
-    if (axios.isAxiosError(err)) {
-      return rejectWithValue(
-        err.response?.data?.message || "Ошибка авторизации",
-      );
-    }
+    if (axios.isAxiosError(err))
+      return rejectWithValue(err.response?.data?.message || "Ошибка входа");
     return rejectWithValue("Непредвиденная ошибка");
   }
 });
 
-// 2. Экшен для РЕГИСТРАЦИИ
+// 2. РЕГИСТРАЦИЯ
 export const registerUser = createAsyncThunk<
   AuthResponse,
   Record<string, string>,
@@ -59,14 +60,15 @@ export const registerUser = createAsyncThunk<
     localStorage.setItem("token", response.data.token);
     return response.data;
   } catch (err: unknown) {
-    if (axios.isAxiosError(err)) {
+    if (axios.isAxiosError(err))
       return rejectWithValue(
-        err.response?.data?.message || "Ошибка при регистрации",
+        err.response?.data?.message || "Ошибка регистрации",
       );
-    }
     return rejectWithValue("Непредвиденная ошибка");
   }
 });
+
+// 3. ПОЛУЧЕНИЕ ЮЗЕРА
 export const getMe = createAsyncThunk<IUser, void, { rejectValue: string }>(
   "auth/getMe",
   async (_, { rejectWithValue }) => {
@@ -74,12 +76,11 @@ export const getMe = createAsyncThunk<IUser, void, { rejectValue: string }>(
       const response = await axiosInstance.get<IUser>("/auth/me");
       return response.data;
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
+      if (axios.isAxiosError(err))
         return rejectWithValue(
-          err.response?.data?.message || "Ошибка получения профиля",
+          err.response?.data?.message || "Ошибка загрузки профиля",
         );
-      }
-      return rejectWithValue("Непредвиденная ошибка");
+      return rejectWithValue("Ошибка");
     }
   },
 );
@@ -88,7 +89,7 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    logout: (state: AuthState) => {
+    logout: (state) => {
       state.user = null;
       state.token = null;
       localStorage.removeItem("token");
@@ -96,24 +97,22 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Логика для LOGIN
+      // LOGIN
       .addCase(loginUser.pending, (state) => {
-        // Убрали : AuthState
         state.loading = true;
         state.error = null;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
-        // Тут он сам поймет и state, и action
         state.loading = false;
         state.user = action.payload.user;
         state.token = action.payload.token;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload ?? "Ошибка входа";
+        state.error = action.payload ?? "Ошибка";
       })
 
-      // Логика для REGISTER
+      // REGISTER
       .addCase(registerUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -125,8 +124,10 @@ const authSlice = createSlice({
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload ?? "Ошибка регистрации";
+        state.error = action.payload ?? "Ошибка";
       })
+
+      // GET ME
       .addCase(getMe.fulfilled, (state, action) => {
         state.user = action.payload;
       });
