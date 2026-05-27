@@ -6,10 +6,11 @@ import RegisterPage from "./pages/RegisterPage";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
 import ExplorePage from "./pages/ExplorePage";
-import { useAppSelector, useAppDispatch } from "./redux/hooks"; // Проверь путь
+import { useAppSelector, useAppDispatch } from "./redux/hooks";
 import ResetPage from "./pages/ResetPage";
+import ResetPasswordConfirmPage from "./pages/ResetPasswordConfirmPage"; // Импорт новой страницы
 import ProfilePage from "./pages/ProfilePage";
-import { addMessage } from "./redux/chat/chatSlice"; // Импортируй свой редюсер
+import { addMessage } from "./redux/chat/chatSlice";
 import MessagesPage from "./pages/MessagesPage";
 import { getMe } from "./redux/auth/authSlice";
 import { socket } from "./api/socket";
@@ -20,11 +21,11 @@ function App() {
 
   useEffect(() => {
     if (token && !user) {
-      dispatch(getMe()); // Замени на свой реальный экшен получения профиля
+      dispatch(getMe());
     }
   }, [token, user, dispatch]);
 
-  // 2. Эффект для сокетов (запускается только когда user._id точно есть)
+  // Эффект для сокетов
   useEffect(() => {
     if (user?._id) {
       socket.emit("join", user._id);
@@ -64,8 +65,15 @@ function App() {
             path="/register"
             element={!token ? <RegisterPage /> : <Navigate to="/" />}
           />
-          <Route path="/reset" element={<ResetPage />} />
 
+          {/* Публичные страницы для сброса пароля */}
+          <Route path="/reset" element={<ResetPage />} />
+          <Route
+            path="/reset-password/:token"
+            element={<ResetPasswordConfirmPage />}
+          />
+
+          {/* Защищенные роуты (доступны только с токеном) */}
           <Route
             path="/"
             element={token ? <HomePage /> : <Navigate to="/login" />}

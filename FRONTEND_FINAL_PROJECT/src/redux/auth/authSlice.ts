@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import axiosInstance from "../../api/axiosInstance";
+import { AxiosError } from "axios";
 import type { IUser } from "../../types";
 
 interface AuthResponse {
@@ -17,7 +18,6 @@ interface AuthState {
 
 const initialState: AuthState = {
   user: null,
-  // ВАЖНО: Проверяем, чтобы токен не был строкой "undefined"
   token:
     localStorage.getItem("token") === "undefined"
       ? null
@@ -53,17 +53,23 @@ export const registerUser = createAsyncThunk<
   { rejectValue: string }
 >("auth/register", async (userData, { rejectWithValue }) => {
   try {
+    const payload = {
+      username: userData.username,
+      email: userData.email,
+      password: userData.password,
+      fullName: userData.fullName,
+    };
+
     const response = await axiosInstance.post<AuthResponse>(
       "/auth/register",
-      userData,
+      payload,
     );
     localStorage.setItem("token", response.data.token);
     return response.data;
   } catch (err: unknown) {
-    if (axios.isAxiosError(err))
-      return rejectWithValue(
-        err.response?.data?.message || "Ошибка регистрации",
-      );
+    if (err instanceof AxiosError && err.response) {
+      return rejectWithValue(err.response.data.message || "Ошибка регистрации");
+    }
     return rejectWithValue("Непредвиденная ошибка");
   }
 });
@@ -84,6 +90,49 @@ export const getMe = createAsyncThunk<IUser, void, { rejectValue: string }>(
     }
   },
 );
+
+// 4. СБРОС ПАРОЛЯ (Добавили этот недостающий экшен)
+export const resetPasswordAction = createAsyncThunk<
+  string,
+  { token: string; password: string },
+  { rejectValue: string }
+>("auth/resetPassword", async ({ token, password }, { rejectWithValue }) => {
+  try {
+    const response = await axiosInstance.post<{ message: string }>(
+      `/auth/reset-password/${token}`,
+      { password },
+    );
+    return response.data.message;
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err)) {
+      return rejectWithValue(
+        err.response?.data?.message || "Ошибка сброса пароля",
+      );
+    }
+    return rejectWithValue("Непредвиденная ошибка");
+  }
+});
+// 5. ЗАПРОС НА ВОССТАНОВЛЕНИЕ ПАРОЛЯ (Отправка ссылки на почту)
+export const forgotPassword = createAsyncThunk<
+  string,
+  string,
+  { rejectValue: string }
+>("auth/forgotPassword", async (email, { rejectWithValue }) => {
+  try {
+    const response = await axiosInstance.post<{ message: string }>(
+      "/auth/forgot-password",
+      { identity: email },
+    );
+    return response.data.message;
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err)) {
+      return rejectWithValue(
+        err.response?.data?.message || "Ошибка отправки письма",
+      );
+    }
+    return rejectWithValue("Непредвиденная ошибка");
+  }
+});
 
 const authSlice = createSlice({
   name: "auth",

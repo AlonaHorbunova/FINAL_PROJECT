@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { RequestHandler } from "express";
 import { register, login, getMe } from "../controllers/auth.controller.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js"; // Исправлено имя
 
@@ -10,8 +11,6 @@ router.post("/register", register);
 // Вход: POST /api/auth/login
 router.post("/login", login);
 
-// Получение данных о себе: GET /api/auth/me
-// Используем authMiddleware для проверки токена
-router.get("/me", authMiddleware, getMe);
+router.get("/me", authMiddleware as RequestHandler, getMe as RequestHandler);
 
 export default router;

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react"; // ИЗМЕНЕНО: Добавлен useState
 import {
   Box,
   Button,
@@ -26,6 +26,9 @@ const RegisterPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const { loading, error, token } = useAppSelector((state) => state.auth);
 
+  // ДОБАВЛЕНО: Состояние для отслеживания успешного создания аккаунта
+  const [isSuccess, setIsSuccess] = useState(false);
+
   useEffect(() => {
     if (token) {
       navigate("/");
@@ -38,10 +41,120 @@ const RegisterPage: React.FC = () => {
     formState: { errors },
   } = useForm<RegisterFormData>();
 
-  const onSubmit = (data: RegisterFormData) => {
-    dispatch(registerUser(data));
+  // ИЗМЕНЕНО: Функция стала асинхронной (async), чтобы дождаться ответа бэкенда
+  const onSubmit = async (data: RegisterFormData) => {
+    // ВАЖНО: Формируем объект СТРОГО с теми именами, которые ждет сервер
+    const payload = {
+      username: data.username,
+      email: data.email,
+      password: data.password,
+      fullName: data.fullName, // Теперь это поле будет передано
+    };
+
+    // ДОБАВЛЕНО: Блок try/catch для обработки ответа бэкенда через .unwrap()
+    try {
+      // .unwrap() вытаскивает чистый результат или бросает ошибку, если бэк вернул 400/500
+      await dispatch(registerUser(payload)).unwrap();
+      // Если строка выше выполнилась успешно — переключаем экран
+      setIsSuccess(true);
+    } catch (err) {
+      // Если бэк вернул ошибку, её поймает твой authSlice и выведет наверх, здесь просто логируем
+      console.error("Ошибка при регистрации в компоненте:", err);
+    }
   };
 
+  // ДОБАВЛЕНО: Новый блок разметки. Если регистрация успешна — показываем это сообщение вместо формы
+  if (isSuccess) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          bgcolor: "#ffffff",
+          px: 2,
+        }}
+      >
+        <Box sx={{ display: "flex", flexDirection: "column", width: "350px" }}>
+          <Paper
+            variant="outlined"
+            sx={{
+              width: "350px",
+              pt: "40px",
+              px: "40px",
+              pb: "40px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              borderColor: "#dbdbdb",
+              borderRadius: "1px",
+              boxShadow: "none",
+              boxSizing: "border-box",
+              textAlign: "center",
+            }}
+          >
+            <img
+              src="/ichgram.png"
+              alt="ICHGRAM"
+              style={{
+                width: "190px",
+                height: "106.87px",
+                objectFit: "fill",
+                display: "block",
+                marginBottom: "20px",
+              }}
+            />
+
+            <Typography
+              variant="h6"
+              sx={{
+                fontSize: "16px",
+                fontWeight: "600",
+                mb: "10px",
+                color: "#262626",
+              }}
+            >
+              You have been successfully registered!
+            </Typography>
+
+            <Typography
+              variant="body2"
+              sx={{
+                fontSize: "12px",
+                color: "#8e8e8e",
+                mb: "25px",
+                lineHeight: "18px",
+              }}
+            >
+              Click the button below to sign in.
+            </Typography>
+
+            <Button
+              component={RouterLink}
+              to="/login"
+              fullWidth
+              variant="contained"
+              sx={{
+                height: "32px",
+                bgcolor: "#0095f6",
+                borderRadius: "8px",
+                textTransform: "none",
+                fontWeight: "bold",
+                fontSize: "14px",
+                boxShadow: "none",
+                "&:hover": { bgcolor: "#1877f2", boxShadow: "none" },
+              }}
+            >
+              Sign in
+            </Button>
+          </Paper>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Оставшаяся часть кода (форма) осталась абсолютно без изменений
   return (
     <Box
       sx={{
@@ -145,8 +258,9 @@ const RegisterPage: React.FC = () => {
                 minLength: {
                   value: 4,
                   message: "This username is already taken. Try another.",
-                }, // Защита от коротких ников
+                },
               })}
+              autoComplete="username"
               fullWidth
               placeholder="Username"
               size="small"
@@ -172,6 +286,7 @@ const RegisterPage: React.FC = () => {
                 required: "Введите пароль",
                 minLength: { value: 6, message: "Минимум 6 символов" },
               })}
+              autoComplete="new-password"
               fullWidth
               placeholder="Password"
               type="password"
