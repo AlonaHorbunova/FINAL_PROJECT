@@ -10,6 +10,7 @@ import {
   Drawer,
   TextField,
   Divider,
+  Badge,
 } from "@mui/material";
 import {
   Home,
@@ -22,28 +23,46 @@ import {
   ExitToApp,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { useAppDispatch } from "../../redux/hooks";
+import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import { logout } from "../../redux/auth/authSlice";
 import CreatePostModal from "../Posts/CreatePostModal";
-
-const menuItems = [
-  { text: "Home", icon: <Home />, path: "/" },
-  { text: "Search", icon: <Search />, path: "/search" },
-  { text: "Explore", icon: <Explore />, path: "/explore" },
-  { text: "Messages", icon: <Chat />, path: "/messages" },
-  { text: "Notifications", icon: <FavoriteBorder />, path: "/notifications" },
-  { text: "Create", icon: <AddBox />, path: "/create" },
-  { text: "Profile", icon: <AccountCircle />, path: "/profile" },
-];
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
+  // Получаем список бесед из Redux
+  const conversations = useAppSelector((state) => state.chat.conversations);
+
+  // Считаем общее число непрочитанных
+  const totalUnreadMessages = conversations.reduce(
+    (sum, chat) => sum + (chat.unreadCount || 0),
+    0,
+  );
+
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [activePanel, setActivePanel] = useState<
     "search" | "notifications" | null
   >(null);
+
+  // Динамический массив меню
+  const menuItems = [
+    { text: "Home", icon: <Home />, path: "/" },
+    { text: "Search", icon: <Search />, path: "/search" },
+    { text: "Explore", icon: <Explore />, path: "/explore" },
+    {
+      text: "Messages",
+      icon: (
+        <Badge badgeContent={totalUnreadMessages} color="error" max={99}>
+          <Chat />
+        </Badge>
+      ),
+      path: "/messages",
+    },
+    { text: "Notifications", icon: <FavoriteBorder />, path: "/notifications" },
+    { text: "Create", icon: <AddBox />, path: "/create" },
+    { text: "Profile", icon: <AccountCircle />, path: "/profile" },
+  ];
 
   const handleItemClick = (path: string, text: string) => {
     if (text === "Create") {
@@ -119,7 +138,6 @@ const Sidebar: React.FC = () => {
                 <ListItemIcon sx={{ color: "black", minWidth: "40px" }}>
                   {item.icon}
                 </ListItemIcon>
-                {/* ИСПРАВЛЕНО ТУТ: Стили передаются через главный sx */}
                 <ListItemText
                   primary={item.text}
                   sx={{
@@ -144,7 +162,6 @@ const Sidebar: React.FC = () => {
               <ListItemIcon sx={{ color: "error.main", minWidth: "40px" }}>
                 <ExitToApp />
               </ListItemIcon>
-              {/* ИСПРАВЛЕНО ТУТ: Стили передаются через главный sx */}
               <ListItemText
                 primary="Logout"
                 sx={{

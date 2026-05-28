@@ -10,36 +10,54 @@ import { useAppSelector, useAppDispatch } from "./redux/hooks";
 import ResetPage from "./pages/ResetPage";
 import ResetPasswordConfirmPage from "./pages/ResetPasswordConfirmPage";
 import ProfilePage from "./pages/ProfilePage";
-import { addMessage } from "./redux/chat/chatSlice";
 import MessagesPage from "./pages/MessagesPage";
 import { getMe } from "./redux/auth/authSlice";
+import {
+  addMessage,
+  fetchConversations,
+  Message,
+} from "./redux/chat/chatSlice";
 import { socket } from "./api/socket";
 
 function App() {
   const { token, user } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
 
+  // 1. Проверка профиля при наличии токена
   useEffect(() => {
     if (token && !user) {
       dispatch(getMe());
     }
   }, [token, user, dispatch]);
 
-  // Эффект для сокетов
+  // 2. Глобальная загрузка данных чата при входе на сайт
+  // Добавили проверку user?._id, чтобы запрашивать беседы только тогда, когда юзер точно загружен
   useEffect(() => {
-    if (user?._id) {
-      socket.emit("join", user._id);
-
-      socket.on("new_message", (message) => {
-        dispatch(addMessage(message));
-        console.log("Новое сообщение:", message);
-      });
+    if (token && user?._id) {
+      dispatch(fetchConversations());
     }
+  }, [token, user?._id, dispatch]);
 
-    return () => {
-      socket.off("new_message");
-    };
-  }, [user?._id, dispatch]);
+  // 3. Глобальный слушатель сокетов
+  const userId = user?._id; // Вытаскиваем конкретную строку ID наружу
+
+  useEffect(() => {
+    if (userId) {
+      console.log("🟢 Инициализация сокета для юзера:", userId);
+      socket.emit("join", userId);
+
+      const handleNewMessage = (message: Message) => {
+        console.log("📩 [Глобальный Сокет] Поймал сообщение:", message);
+        dispatch(addMessage(message));
+      };
+
+      socket.on("new_message", handleNewMessage);
+
+      return () => {
+        socket.off("new_message", handleNewMessage);
+      };
+    }
+  }, [userId, dispatch]);
 
   return (
     <Box sx={{ display: "flex" }}>
@@ -73,7 +91,7 @@ function App() {
             element={<ResetPasswordConfirmPage />}
           />
 
-          {/* Защищенные роуты (доступны только с токеном) */}
+          {/* Защищенные роуты */}
           <Route
             path="/"
             element={token ? <HomePage /> : <Navigate to="/login" />}

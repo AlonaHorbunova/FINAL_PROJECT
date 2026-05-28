@@ -12,6 +12,7 @@ import {
   TextField,
   IconButton,
   CircularProgress,
+  Badge, // Добавлено
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import PaperPlaneIcon from "@mui/icons-material/Telegram";
@@ -20,6 +21,7 @@ import {
   addMessage,
   fetchMessages,
   fetchConversations,
+  markAsRead, // Добавлено
 } from "../redux/chat/chatSlice";
 import { fetchUserById, clearProfile } from "../redux/user/userSlice";
 import { socket } from "../api/socket";
@@ -46,7 +48,6 @@ const MessagesPage: React.FC = () => {
   const [messageText, setMessageText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // СОХРАНЯЕМ TARGET_ID И CURRENT_USER В REF, ЧТОБЫ СОКЕТЫ НЕ СПАМИЛИ ПРИ ИХ ИЗМЕНЕНИИ
   const targetIdRef = useRef(targetId);
   const currentUserRef = useRef(currentUser);
 
@@ -58,65 +59,30 @@ const MessagesPage: React.FC = () => {
     currentUserRef.current = currentUser;
   }, [currentUser]);
 
-  // 1. ВХОД В КОМНАТУ СОКЕТА (Строго один раз при монтировании, если юзер есть)
   useEffect(() => {
     if (currentUser?._id) {
-      console.log("🟢 Инициализация сокет-комнаты для:", currentUser._id);
       socket.emit("join", currentUser._id);
     }
   }, [currentUser?._id]);
 
-  // 2. СЛУШАТЕЛЬ ВХОДЯЩИХ СООБЩЕНИЙ (Навешивается ОДИН раз, зависимости пустые!)
-  useEffect(() => {
-    if (!currentUser?._id) return;
-
-    const handleNewMessage = (incomingMsg: Message) => {
-      const activeTargetId = targetIdRef.current;
-      const activeCurrentUser = currentUserRef.current;
-
-      if (!activeCurrentUser) return;
-
-      const currentChatId = activeTargetId
-        ? [activeCurrentUser._id, activeTargetId].sort().join("_")
-        : null;
-
-      // Добавляем сообщение, только если оно из текущего открытого чата
-      if (incomingMsg.chatId === currentChatId) {
-        dispatch(addMessage(incomingMsg));
-      }
-
-      // Обновляем список чатов в боковой панели
-      dispatch(fetchConversations());
-    };
-
-    socket.on("new_message", handleNewMessage);
-
-    return () => {
-      console.log("🔴 Отключение слушателя сообщений");
-      socket.off("new_message", handleNewMessage);
-    };
-  }, [dispatch, currentUser?._id]); // Слушатель зависит только от факта наличия авторизации, а не от переключения чатов
-
-  // Очистка выбранного пользователя при клике на вкладку "Сообщения"
   useEffect(() => {
     if (!targetId) {
       dispatch(clearProfile());
     }
   }, [targetId, dispatch]);
 
-  // 3. ЗАГРУЗКА СПИСКА ЧАТОВ ПРИ СТАРТЕ
   useEffect(() => {
     if (currentUser) {
       dispatch(fetchConversations());
     }
   }, [currentUser, dispatch]);
 
-  // 4. ЗАГРУЗКА ДАННЫХ ДИАЛОГА ПРИ СМЕНЕ СОБЕСЕДНИКА
   useEffect(() => {
     if (targetId && currentUser) {
       dispatch(fetchUserById(targetId));
       const chatId = [currentUser._id, targetId].sort().join("_");
       dispatch(fetchMessages(chatId));
+      dispatch(markAsRead(targetId)); // Сбрасываем счетчик при открытии
     }
   }, [targetId, currentUser, dispatch]);
 
@@ -151,8 +117,7 @@ const MessagesPage: React.FC = () => {
     socket.emit("send_message", messageData);
     dispatch(addMessage(messageData as unknown as Message));
     setMessageText("");
-
-    setTimeout(() => dispatch(fetchConversations()), 200);
+    // УБРАЛИ setTimeout, он больше не нужен
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -181,6 +146,7 @@ const MessagesPage: React.FC = () => {
           gap: 2,
         }}
       >
+        <CircularProgress />
         <Typography variant="h6" color="gray">
           Синхронизация профиля...
         </Typography>
@@ -197,7 +163,6 @@ const MessagesPage: React.FC = () => {
         width: "100%",
       }}
     >
-      {/* ЛЕВАЯ ЧАСТЬ: Динамический список чатов */}
       <Box
         sx={{
           width: "350px",
@@ -211,7 +176,6 @@ const MessagesPage: React.FC = () => {
             {currentUser?.username || "Чаты"}
           </Typography>
         </Box>
-
         <List sx={{ p: 0, overflowY: "auto", flexGrow: 1 }}>
           {conversations.length > 0 ? (
             conversations.map((chat) => {
@@ -228,23 +192,26 @@ const MessagesPage: React.FC = () => {
                     }}
                   >
                     <ListItemAvatar>
-                      <Avatar
-                        src={getFullUrl(chat.user.avatar)}
-                        alt={chat.user.username}
-                      />
+                      {/* Добавлен Badge */}
+                      <Badge
+                        badgeContent={chat.unreadCount || 0}
+                        color="error"
+                        invisible={!chat.unreadCount || chat.unreadCount === 0}
+                      >
+                        <Avatar
+                          src={getFullUrl(chat.user.avatar)}
+                          alt={chat.user.username}
+                        />
+                      </Badge>
                     </ListItemAvatar>
                     <ListItemText
                       primary={
-                        <Typography
-                          component="span"
-                          sx={{ fontWeight: 600, fontSize: "14px" }}
-                        >
+                        <Typography sx={{ fontWeight: 600, fontSize: "14px" }}>
                           {chat.user.username}
                         </Typography>
                       }
                       secondary={
                         <Typography
-                          component="p"
                           noWrap
                           sx={{ fontSize: "12px", color: "gray" }}
                         >
@@ -266,7 +233,6 @@ const MessagesPage: React.FC = () => {
         </List>
       </Box>
 
-      {/* ПРАВАЯ ЧАСТЬ: Окно переписки */}
       <Box
         sx={{
           flexGrow: 1,
@@ -306,7 +272,6 @@ const MessagesPage: React.FC = () => {
                 {activeChatUser.username}
               </Typography>
             </Box>
-
             <Box
               sx={{
                 flexGrow: 1,
@@ -348,7 +313,6 @@ const MessagesPage: React.FC = () => {
               })}
               <div ref={messagesEndRef} />
             </Box>
-
             <Box
               sx={{
                 p: 2,

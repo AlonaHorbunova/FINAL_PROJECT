@@ -1,3 +1,7 @@
 import { io } from "socket.io-client";
 
-export const socket = io("http://localhost:3000");
+// ОДИН ИНСТАНС НА ВСЕ ПРИЛОЖЕНИЕ
+export const socket = io("http://localhost:3000", {
+  autoConnect: true,
+  reconnection: true,
+});

@@ -20,6 +20,7 @@ export interface Conversation {
   user: UserPreview;
   lastMessage: string;
   createdAt: string;
+  unreadCount?: number;
 }
 
 export interface ChatState {
@@ -34,7 +35,6 @@ const initialState: ChatState = {
   loading: false,
 };
 
-// Загрузка сообщений конкретного чата
 export const fetchMessages = createAsyncThunk<Message[], string>(
   "chat/fetchMessages",
   async (chatId: string) => {
@@ -43,7 +43,6 @@ export const fetchMessages = createAsyncThunk<Message[], string>(
   },
 );
 
-// Загрузка списка всех чатов для левой панели
 export const fetchConversations = createAsyncThunk<Conversation[]>(
   "chat/fetchConversations",
   async () => {
@@ -59,9 +58,8 @@ const chatSlice = createSlice({
     addMessage: (state, action: PayloadAction<Message>) => {
       const incoming = action.payload;
 
-      // Если сообщение пришло с бэкенда/сокета (у него уже есть _id)
+      // Логика оптимистичного обновления (если сообщение уже есть)
       if (incoming._id) {
-        // Ищем локальное "оптимистичное" сообщение, у которого еще НЕТ _id
         const optimisticIndex = state.items.findIndex(
           (msg) =>
             !msg._id &&
@@ -71,18 +69,41 @@ const chatSlice = createSlice({
         );
 
         if (optimisticIndex !== -1) {
-          // Нашли! Заменяем временное сообщение полноценным (теперь у него появится _id)
           state.items[optimisticIndex] = incoming;
-          return;
+        } else {
+          // Если дубликат ID — ничего не делаем
+          if (state.items.some((msg) => msg._id === incoming._id)) return;
+          state.items.push(incoming);
         }
-
-        // Дополнительная проверка: если сокет продублировал событие, просто игнорируем
-        const isDuplicate = state.items.some((msg) => msg._id === incoming._id);
-        if (isDuplicate) return;
+      } else {
+        // Если нет ID (новое исходящее) — просто пушим
+        state.items.push(incoming);
       }
 
-      // Если это новое оптимистичное сообщение с фронта или уникальное сообщение от собеседника
-      state.items.push(incoming);
+      // 1. Ищем чат, где sender или receiver совпадает с пользователем чата
+      const conversation = state.conversations.find(
+        (c) =>
+          c.user._id === incoming.sender._id ||
+          c.user._id === incoming.receiver,
+      );
+
+      if (conversation) {
+        // 2. Всегда обновляем последнее сообщение
+        conversation.lastMessage = incoming.text;
+
+        // 3. Увеличиваем счетчик только если отправитель НЕ является текущим пользователем
+        if (conversation.user._id === incoming.sender._id) {
+          conversation.unreadCount = (conversation.unreadCount || 0) + 1;
+        }
+      }
+    },
+    markAsRead: (state, action: PayloadAction<string>) => {
+      const conversation = state.conversations.find(
+        (c) => c.user._id === action.payload,
+      );
+      if (conversation) {
+        conversation.unreadCount = 0;
+      }
     },
   },
   extraReducers: (builder) => {
@@ -90,14 +111,13 @@ const chatSlice = createSlice({
       .addCase(fetchMessages.fulfilled, (state, action) => {
         state.items = action.payload;
       })
-      .addCase(
-        fetchConversations.fulfilled,
-        (state, action: PayloadAction<Conversation[]>) => {
-          state.conversations = action.payload;
-        },
-      );
+      // 🔥 Вот сюда мы аккуратно вставили обновленный кейс:
+      .addCase(fetchConversations.fulfilled, (state, action) => {
+        // Просто сохраняем то, что прислал бэк (включая unreadCount из базы)
+        state.conversations = action.payload;
+      });
   },
 });
 
-export const { addMessage } = chatSlice.actions;
+export const { addMessage, markAsRead } = chatSlice.actions;
 export default chatSlice.reducer;
