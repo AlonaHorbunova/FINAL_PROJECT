@@ -87,3 +87,50 @@ export const markAsRead = async (
     next(error);
   }
 };
+// Получить список всех активных чатов (собеседников) текущего пользователя
+export const getConversations = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Не авторизован" });
+
+    // Находим все сообщения, где юзер был отправителем или получателем
+    const messages = await Message.find({
+      $or: [{ sender: userId }, { receiver: userId }],
+    })
+      .populate("sender receiver", "username avatar")
+      .sort({ createdAt: 1 }); // от старых к новым
+
+    const conversationsMap = new Map();
+
+    // Группируем по собеседнику, оставляя только последнее сообщение
+    messages.forEach((msg) => {
+      // 👇 ЗАЩИТА: Если отправителя или получателя нет в базе (например, удален), пропускаем сообщение
+      if (!msg.sender || !msg.receiver) return;
+
+      const isMe = msg.sender._id.toString() === userId;
+      const partner = isMe ? msg.receiver : msg.sender;
+
+      if (!partner || !partner._id) return;
+
+      conversationsMap.set(partner._id.toString(), {
+        user: partner,
+        lastMessage: msg.text,
+        createdAt: msg.createdAt,
+      });
+    });
+
+    // Превращаем в массив и сортируем: чаты с самыми свежими сообщениями — вверх
+    const conversations = Array.from(conversationsMap.values()).sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+
+    res.json(conversations);
+  } catch (error) {
+    next(error);
+  }
+};

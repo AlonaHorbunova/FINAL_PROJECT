@@ -11,47 +11,111 @@ import {
   ListItemText,
   TextField,
   IconButton,
+  CircularProgress,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import PaperPlaneIcon from "@mui/icons-material/Telegram";
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
-import { addMessage, fetchMessages } from "../redux/chat/chatSlice";
-import { fetchUserById } from "../redux/user/userSlice";
+import {
+  addMessage,
+  fetchMessages,
+  fetchConversations,
+} from "../redux/chat/chatSlice";
+import { fetchUserById, clearProfile } from "../redux/user/userSlice";
 import { socket } from "../api/socket";
 import { Message } from "../redux/chat/chatSlice";
-import { IUser } from "../types";
 
 const MessagesPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
-
   const targetId = searchParams.get("targetId");
 
-  // ЯВНО ПРОПИСЫВАЕМ ТИПЫ ДЛЯ REDUX, ЧТОБЫ TYPESCRIPT НЕ ПУТАЛ СТЕЙТЫ
-  const currentUser = useAppSelector(
-    (state: { auth: { user: IUser | null } }) => state.auth.user,
+  const { user: currentUser, loading: isAuthLoading } = useAppSelector(
+    (state) => state.auth,
   );
+  const { profileUser, loading: isUserLoading } = useAppSelector(
+    (state) => state.user,
+  );
+  const conversations = useAppSelector((state) => state.chat.conversations);
+  const allMessages = useAppSelector((state) => state.chat.items);
 
-  const { profileUser: activeChatUser } = useAppSelector(
-    (state: { user: { profileUser: IUser | null } }) => state.user,
-  );
-
-  const allMessages = useAppSelector(
-    (state: { chat: { items: Message[] } }) => state.chat.items,
-  );
+  const activeChatUser = targetId
+    ? profileUser || conversations.find((c) => c.user._id === targetId)?.user
+    : null;
 
   const [messageText, setMessageText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  // СОХРАНЯЕМ TARGET_ID И CURRENT_USER В REF, ЧТОБЫ СОКЕТЫ НЕ СПАМИЛИ ПРИ ИХ ИЗМЕНЕНИИ
+  const targetIdRef = useRef(targetId);
+  const currentUserRef = useRef(currentUser);
+
+  useEffect(() => {
+    targetIdRef.current = targetId;
+  }, [targetId]);
+
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
+
+  // 1. ВХОД В КОМНАТУ СОКЕТА (Строго один раз при монтировании, если юзер есть)
+  useEffect(() => {
+    if (currentUser?._id) {
+      console.log("🟢 Инициализация сокет-комнаты для:", currentUser._id);
+      socket.emit("join", currentUser._id);
+    }
+  }, [currentUser?._id]);
+
+  // 2. СЛУШАТЕЛЬ ВХОДЯЩИХ СООБЩЕНИЙ (Навешивается ОДИН раз, зависимости пустые!)
+  useEffect(() => {
+    if (!currentUser?._id) return;
+
+    const handleNewMessage = (incomingMsg: Message) => {
+      const activeTargetId = targetIdRef.current;
+      const activeCurrentUser = currentUserRef.current;
+
+      if (!activeCurrentUser) return;
+
+      const currentChatId = activeTargetId
+        ? [activeCurrentUser._id, activeTargetId].sort().join("_")
+        : null;
+
+      // Добавляем сообщение, только если оно из текущего открытого чата
+      if (incomingMsg.chatId === currentChatId) {
+        dispatch(addMessage(incomingMsg));
+      }
+
+      // Обновляем список чатов в боковой панели
+      dispatch(fetchConversations());
+    };
+
+    socket.on("new_message", handleNewMessage);
+
+    return () => {
+      console.log("🔴 Отключение слушателя сообщений");
+      socket.off("new_message", handleNewMessage);
+    };
+  }, [dispatch, currentUser?._id]); // Слушатель зависит только от факта наличия авторизации, а не от переключения чатов
+
+  // Очистка выбранного пользователя при клике на вкладку "Сообщения"
+  useEffect(() => {
+    if (!targetId) {
+      dispatch(clearProfile());
+    }
+  }, [targetId, dispatch]);
+
+  // 3. ЗАГРУЗКА СПИСКА ЧАТОВ ПРИ СТАРТЕ
+  useEffect(() => {
+    if (currentUser) {
+      dispatch(fetchConversations());
+    }
+  }, [currentUser, dispatch]);
+
+  // 4. ЗАГРУЗКА ДАННЫХ ДИАЛОГА ПРИ СМЕНЕ СОБЕСЕДНИКА
   useEffect(() => {
     if (targetId && currentUser) {
-      // 1. Загружаем данные пользователя, с которым общаемся
       dispatch(fetchUserById(targetId));
-
-      // 2. Генерируем ID чата точно так же, как при отправке сообщения
       const chatId = [currentUser._id, targetId].sort().join("_");
-
-      // 3. Запрашиваем историю переписки из базы данных MongoDB!
       dispatch(fetchMessages(chatId));
     }
   }, [targetId, currentUser, dispatch]);
@@ -87,6 +151,8 @@ const MessagesPage: React.FC = () => {
     socket.emit("send_message", messageData);
     dispatch(addMessage(messageData as unknown as Message));
     setMessageText("");
+
+    setTimeout(() => dispatch(fetchConversations()), 200);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -103,17 +169,35 @@ const MessagesPage: React.FC = () => {
       : `http://localhost:3000/${avatarPath.replace(/^\//, "")}`;
   };
 
+  if (isAuthLoading || !currentUser?._id) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          flexDirection: "column",
+          gap: 2,
+        }}
+      >
+        <Typography variant="h6" color="gray">
+          Синхронизация профиля...
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box
       sx={{
         display: "flex",
         height: "100vh",
         bgcolor: "#ffffff",
-        borderLeft: "1px solid #efefef",
         width: "100%",
       }}
     >
-      {/* ЛЕВАЯ ЧАСТЬ: Список чатов */}
+      {/* ЛЕВАЯ ЧАСТЬ: Динамический список чатов */}
       <Box
         sx={{
           width: "350px",
@@ -129,54 +213,53 @@ const MessagesPage: React.FC = () => {
         </Box>
 
         <List sx={{ p: 0, overflowY: "auto", flexGrow: 1 }}>
-          {activeChatUser ? (
-            <ListItem disablePadding>
-              {/* ИСПОЛЬЗУЕМ ListItemButton вместо свойства button */}
-              <ListItemButton
-                selected={true}
-                onClick={() =>
-                  setSearchParams({ targetId: activeChatUser._id })
-                }
-                sx={{
-                  p: 2,
-                  "&.Mui-selected": { bgcolor: "#f5f5f5" },
-                  "&:hover": { bgcolor: "#fafafa" },
-                }}
-              >
-                <ListItemAvatar>
-                  <Avatar
-                    src={getFullUrl(activeChatUser.avatar)}
-                    alt={activeChatUser.username}
-                  />
-                </ListItemAvatar>
-                <ListItemText
-                  primary={
-                    <Typography
-                      component="span"
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: "14px",
-                        color: "#262626",
-                      }}
-                    >
-                      {activeChatUser.username}
-                    </Typography>
-                  }
-                  secondary={
-                    <Typography
-                      component="p"
-                      sx={{ fontSize: "12px", color: "gray" }}
-                    >
-                      Активный диалог
-                    </Typography>
-                  }
-                />
-              </ListItemButton>
-            </ListItem>
+          {conversations.length > 0 ? (
+            conversations.map((chat) => {
+              const isSelected = targetId === chat.user._id;
+              return (
+                <ListItem disablePadding key={chat.user._id}>
+                  <ListItemButton
+                    selected={isSelected}
+                    onClick={() => setSearchParams({ targetId: chat.user._id })}
+                    sx={{
+                      p: 2,
+                      "&.Mui-selected": { bgcolor: "#f5f5f5" },
+                      "&:hover": { bgcolor: "#fafafa" },
+                    }}
+                  >
+                    <ListItemAvatar>
+                      <Avatar
+                        src={getFullUrl(chat.user.avatar)}
+                        alt={chat.user.username}
+                      />
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={
+                        <Typography
+                          component="span"
+                          sx={{ fontWeight: 600, fontSize: "14px" }}
+                        >
+                          {chat.user.username}
+                        </Typography>
+                      }
+                      secondary={
+                        <Typography
+                          component="p"
+                          noWrap
+                          sx={{ fontSize: "12px", color: "gray" }}
+                        >
+                          {chat.lastMessage}
+                        </Typography>
+                      }
+                    />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })
           ) : (
             <Box sx={{ p: 3, textAlign: "center", color: "gray" }}>
               <Typography variant="body2">
-                Перейдите в профиль пользователя, чтобы начать диалог.
+                У вас пока нет активных чатов.
               </Typography>
             </Box>
           )}
@@ -192,7 +275,18 @@ const MessagesPage: React.FC = () => {
           bgcolor: "#ffffff",
         }}
       >
-        {activeChatUser ? (
+        {targetId && isUserLoading && !activeChatUser ? (
+          <Box
+            sx={{
+              flexGrow: 1,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <CircularProgress size={40} />
+          </Box>
+        ) : activeChatUser ? (
           <>
             <Box
               sx={{
@@ -292,7 +386,6 @@ const MessagesPage: React.FC = () => {
               flexDirection: "column",
               justifyContent: "center",
               alignItems: "center",
-              color: "#262626",
             }}
           >
             <PaperPlaneIcon sx={{ fontSize: 96, color: "#262626", mb: 2 }} />
@@ -300,7 +393,7 @@ const MessagesPage: React.FC = () => {
               Ваши сообщения
             </Typography>
             <Typography variant="body2" sx={{ color: "gray" }}>
-              Отправляйте личные фото и сообщения другу.
+              Выберите чат слева, чтобы начать общение.
             </Typography>
           </Box>
         )}

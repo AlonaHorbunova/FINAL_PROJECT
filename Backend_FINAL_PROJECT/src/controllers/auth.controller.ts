@@ -77,10 +77,11 @@ export const login = async (
     res.json({
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
         email: user.email,
         fullName: user.fullName,
+        avatar: user.avatar || "",
       },
     });
   } catch (error) {

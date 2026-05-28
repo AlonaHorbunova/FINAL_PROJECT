@@ -141,7 +141,8 @@ const authSlice = createSlice({
     logout: (state) => {
       state.user = null;
       state.token = null;
-      localStorage.removeItem("token");
+      localStorage.clear();
+      window.location.href = "/login";
     },
   },
   extraReducers: (builder) => {
@@ -177,8 +178,17 @@ const authSlice = createSlice({
       })
 
       // GET ME
+      .addCase(getMe.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(getMe.fulfilled, (state, action) => {
-        state.user = action.payload;
+        state.loading = false;
+        state.user = action.payload; // Сюда прилетает полноценный юзер с бэкенда
+      })
+      .addCase(getMe.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload ?? "Ошибка загрузки профиля";
       });
   },
 });

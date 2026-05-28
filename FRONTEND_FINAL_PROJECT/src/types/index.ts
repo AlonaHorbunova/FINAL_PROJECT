@@ -1,20 +1,20 @@
-// 1. Сначала опишем пользователя
+
 export interface IUser {
   _id: string;
   username: string;
   avatar?: string;
   bio?: string;
   website?: string;
-  followers?: string[]; // массив ID подписчиков
-  following?: string[]; // массив ID тех, на кого подписан
+  followers?: string[]; 
+  following?: string[]; 
   followersCount?: number;
   followingCount?: number;
 }
 
-// 2. Обновим комментарий (теперь мы знаем, кто его написал)
+
 export interface IComment {
   _id: string;
-  user: IUser; // здесь будет объект с именем и фото
+  user: IUser; 
   text: string;
   createdAt: string;
 }
@@ -22,10 +22,10 @@ export interface IComment {
 // 3. Обновим пост
 export interface IPost {
   _id: string;
-  imageUrl: string; // Изменили с image на imageUrl под бэкенд
-  caption: string; // Изменили с description на caption под бэкенд
-  author: IUser; // Автор поста (его мы популейтим)
-  likes: string[]; // Массив ID тех, кто лайкнул
+  imageUrl: string; 
+  caption: string; 
+  author: IUser; 
+  likes: string[]; 
   comments: IComment[];
   createdAt: string;
 }

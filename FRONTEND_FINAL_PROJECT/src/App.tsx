@@ -8,7 +8,7 @@ import HomePage from "./pages/HomePage";
 import ExplorePage from "./pages/ExplorePage";
 import { useAppSelector, useAppDispatch } from "./redux/hooks";
 import ResetPage from "./pages/ResetPage";
-import ResetPasswordConfirmPage from "./pages/ResetPasswordConfirmPage"; // Импорт новой страницы
+import ResetPasswordConfirmPage from "./pages/ResetPasswordConfirmPage";
 import ProfilePage from "./pages/ProfilePage";
 import { addMessage } from "./redux/chat/chatSlice";
 import MessagesPage from "./pages/MessagesPage";

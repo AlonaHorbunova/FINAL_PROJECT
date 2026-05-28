@@ -3,27 +3,24 @@ import type { RequestHandler } from "express";
 import {
   sendMessage,
   getChatMessages,
+  getConversations,
+  getUnreadCount,
+  markAsRead,
 } from "../controllers/message.controller.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
-import { getUnreadCount } from "../controllers/message.controller.js";
-import { markAsRead } from "../controllers/message.controller.js";
 
 const router = Router();
 
-// Приводим к типу RequestHandler, чтобы Express не ругался на несовпадение Request/AuthRequest
+// Глобально защищаем все роуты сообщений одной мидлварой
 router.use(authMiddleware as unknown as RequestHandler);
 
+// Статические роуты пишем строго НАВЕРХУ
 router.post("/", sendMessage as unknown as RequestHandler);
+router.get("/conversations", getConversations as unknown as RequestHandler);
+router.get("/unread-count", getUnreadCount as unknown as RequestHandler);
+
+// Роуты с динамическими параметрами (:) переносим в самый КОНЕЦ
+router.patch("/mark-read/:chatId", markAsRead as unknown as RequestHandler);
 router.get("/:chatId", getChatMessages as unknown as RequestHandler);
-router.get(
-  "/unread-count",
-  authMiddleware as unknown as RequestHandler,
-  getUnreadCount,
-);
-router.patch(
-  "/mark-read/:chatId",
-  authMiddleware as unknown as RequestHandler,
-  markAsRead,
-);
 
 export default router;
