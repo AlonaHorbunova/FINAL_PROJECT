@@ -7,7 +7,7 @@ interface EmailOptions {
 }
 
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
-  // Настройки берутся из файла .env (мы настроим его в шаге 4)
+  // Настройки берутся из файла .env
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || "587", 10),
@@ -16,10 +16,14 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    // ДОБАВИЛИ ЭТОТ БЛОК ДЛЯ ОБХОДА БЛОКИРОВКИ АНТИВИРУСА
+    tls: {
+      rejectUnauthorized: false,
+    },
   });
 
   const mailOptions = {
-    from: `"ICHGRAM" <${process.env.SMTP_USER}>`, // Имя отправителя и его email
+    from: `"ICHGRAM" <${process.env.SMTP_FROM_EMAIL}>`, // Имя отправителя и его email
     to: options.email, // Кому отправляем
     subject: options.subject, // Тема письма
     html: options.html, // Тело письма в формате HTML

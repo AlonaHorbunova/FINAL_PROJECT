@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react"; // ИЗМЕНЕНО: Добавлен useState
 import {
   Box,
   Button,
@@ -7,11 +7,17 @@ import {
   Alert,
   Link,
   Typography,
+  IconButton, // ДОБАВЛЕНО
+  InputAdornment, // ДОБАВЛЕНО
 } from "@mui/material";
 import { useForm } from "react-hook-form";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
 import { loginUser } from "../redux/auth/authSlice";
+
+// БЕЗОПАСНЫЙ ИМПОРТ ИКОНОК ДЛЯ MUI v6
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
 interface LoginFormData {
   email: string;
@@ -23,6 +29,9 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { loading, error, token } = useAppSelector((state) => state.auth);
+
+  // ДОБАВЛЕНО: Состояние для показа/скрытия пароля
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -45,14 +54,14 @@ const LoginPage: React.FC = () => {
       sx={{
         display: "flex",
         justifyContent: "center",
-        alignItems: "center", // Выравнивает форму и телефон строго по центру экрана
+        alignItems: "center",
         minHeight: "100vh",
         bgcolor: "#ffffff",
         gap: "32px",
         px: 2,
       }}
     >
-      {/* ЛЕВАЯ ЧАСТЬ: КОМПОЗИТНЫЙ ТЕЛЕФОН С НАПОЛНЕНИЕМ */}
+      {/* ЛЕВАЯ ЧАСТЬ: ТЕЛЕФОН */}
       <Box
         sx={{
           position: "relative",
@@ -65,7 +74,6 @@ const LoginPage: React.FC = () => {
           backgroundPosition: "center",
         }}
       >
-        {/* КАРТИНКА НАПОЛНЕНИЯ ТЕЛЕФОНА (СКРИНШОТ) */}
         <Box
           component="img"
           src="/content-phone.png"
@@ -73,25 +81,23 @@ const LoginPage: React.FC = () => {
           sx={{
             position: "absolute",
             top: "45px",
-            left: "120px", // Отступ слева внутрь экрана
-            width: "215px", // Ширина экрана
-            height: "460px", // Высота экрана
+            left: "120px",
+            width: "215px",
+            height: "460px",
             objectFit: "cover",
-            borderRadius: "24px", // Скругление экрана телефона
+            borderRadius: "24px",
           }}
         />
       </Box>
 
-      {/* ПРАВАЯ ЧАСТЬ: СЕТКА ФОРМЫ АВТОРИЗАЦИИ */}
+      {/* ПРАВАЯ ЧАСТЬ: ФОРМА АВТОРИЗАЦИИ */}
       <Box sx={{ display: "flex", flexDirection: "column", width: "350px" }}>
-        {/* ВЕРХНЯЯ РАМКА С ИНПУТАМИ (Строго 350px на 411.98px) */}
         <Paper
           variant="outlined"
           sx={{
             width: "350px",
-
-            pt: "30px", // Отступ сверху до логотипа
-            px: "40px", // Отступы по бокам 40px из макета
+            pt: "30px",
+            px: "40px",
             pb: "25px",
             display: "flex",
             flexDirection: "column",
@@ -99,19 +105,17 @@ const LoginPage: React.FC = () => {
             borderColor: "#dbdbdb",
             borderRadius: "1px",
             boxShadow: "none",
-            boxSizing: "border-box", // Защищает размеры от раздувания из-за padding
+            boxSizing: "border-box",
           }}
         >
-          {/* ЛОГОТИП — Прямой вывод тега img с жесткими размерами */}
           <img
             src="/ichgram.png"
             alt="ICHGRAM"
             style={{
               width: "190px",
-              height: "106.87px", // Чуть увеличили высоту контейнера под пропорции файла
-              objectFit: "fill", // Насильно растягивает контент картинки на полные 175x60 без сжатия полей
+              height: "106.87px",
+              objectFit: "fill",
               display: "block",
-              // Скорректированный отступ до инпутов, чтобы сохранить общую высоту
             }}
           />
 
@@ -131,6 +135,7 @@ const LoginPage: React.FC = () => {
               </Alert>
             )}
 
+            {/* ИНПУТ ЛОГИНА */}
             <TextField
               {...register("email", { required: "Введите email" })}
               fullWidth
@@ -152,11 +157,12 @@ const LoginPage: React.FC = () => {
               }}
             />
 
+            {/* ИНПУТ ПАРОЛЯ (ИЗМЕНЕНО: Добавлен глазик) */}
             <TextField
               {...register("password", { required: "Введите пароль" })}
               fullWidth
               placeholder="Password"
-              type="password"
+              type={showPassword ? "text" : "password"} // Динамический тип
               size="small"
               error={!!errors.password}
               helperText={errors.password?.message}
@@ -166,11 +172,31 @@ const LoginPage: React.FC = () => {
                   height: "36px",
                   bgcolor: "#fafafa",
                   fontSize: "12px",
+                  pr: "4px", // Смещение для размещения иконки внутри 36px
                   "& fieldset": { borderColor: "#dbdbdb" },
                   "&:hover fieldset": { borderColor: "#dbdbdb" },
                   "&.Mui-focused fieldset": { borderColor: "#a8a8a8" },
                 },
                 "& .MuiInputBase-input": { padding: "9px 8px" },
+              }}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? (
+                          <VisibilityOff sx={{ fontSize: "18px" }} />
+                        ) : (
+                          <Visibility sx={{ fontSize: "18px" }} />
+                        )}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
 
@@ -194,13 +220,12 @@ const LoginPage: React.FC = () => {
             </Button>
           </Box>
 
-          {/* Разделитель OR (ИЛИ) — Отступ сверху ровно 28.4px */}
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
               width: "100%",
-              mt: "28.4px", // Идеальный отступ по твоему замеру
+              mt: "28.4px",
               mb: "24px",
             }}
           >
@@ -218,7 +243,6 @@ const LoginPage: React.FC = () => {
             <Box sx={{ flex: 1, height: "1px", bgcolor: "#dbdbdb" }} />
           </Box>
 
-          {/* Ссылка "Забыли пароль?" */}
           <Link
             component={RouterLink}
             to="/reset"
@@ -234,13 +258,12 @@ const LoginPage: React.FC = () => {
           </Link>
         </Paper>
 
-        {/* НИЖНЯЯ РАМКА (350px на 63px, зазор 10px) */}
         <Paper
           variant="outlined"
           sx={{
             width: "350px",
             height: "63px",
-            mt: "10px", // Фиксированный зазор 10px
+            mt: "10px",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",

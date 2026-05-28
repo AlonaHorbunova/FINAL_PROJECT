@@ -69,7 +69,7 @@ function App() {
           {/* Публичные страницы для сброса пароля */}
           <Route path="/reset" element={<ResetPage />} />
           <Route
-            path="/reset-password/:token"
+            path="/reset-password-confirm/:token"
             element={<ResetPasswordConfirmPage />}
           />
 

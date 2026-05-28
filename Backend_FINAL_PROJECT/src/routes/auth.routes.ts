@@ -1,15 +1,23 @@
 import { Router } from "express";
 import type { RequestHandler } from "express";
-import { register, login, getMe } from "../controllers/auth.controller.js";
-import { authMiddleware } from "../middlewares/authMiddleware.js"; // Исправлено имя
+import {
+  register,
+  login,
+  getMe,
+  forgotPassword,
+  resetPassword, // 1. ДОБАВЬ ИМПОРТ ЭТОЙ ФУНКЦИИ ИЗ КОНТРОЛЛЕРА
+} from "../controllers/auth.controller.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
 
 const router = Router();
 
-// Регистрация: POST /api/auth/register
 router.post("/register", register);
-
-// Вход: POST /api/auth/login
 router.post("/login", login);
+router.post("/forgot-password", forgotPassword as RequestHandler);
+
+// 2. ДОБАВЬ ЭТОТ РОУТ (Именно сюда фронтенд будет слать новый пароль)
+// Обрати внимание: если в твоем redux-экшене путь "/reset/:token", то и тут напиши "/reset/:token"
+router.post("/reset-password/:token", resetPassword as RequestHandler); 
 
 router.get("/me", authMiddleware as RequestHandler, getMe as RequestHandler);
 

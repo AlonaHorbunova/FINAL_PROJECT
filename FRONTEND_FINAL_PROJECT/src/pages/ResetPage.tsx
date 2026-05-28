@@ -1,23 +1,51 @@
 import React from "react";
 import { Box, Button, TextField, Paper, Typography, Link } from "@mui/material";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined"; // Не забудь установить @mui/icons-material, если еще нет
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useForm } from "react-hook-form";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+
+// Импорты с правильными путями к твоей папке redux
+import { forgotPassword } from "../redux/auth/authSlice";
+import { AppDispatch } from "../redux/store";
 
 interface ResetFormData {
   identity: string;
 }
 
 const ResetPage: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<ResetFormData>();
 
-  const onSubmit = (data: ResetFormData) => {
+  // ОБНОВЛЕННАЯ ФУНКЦИЯ ОНСАБМИТ С .unwrap()
+  const onSubmit = async (data: ResetFormData) => {
     console.log("Данные для сброса пароля:", data);
-    // Здесь позже будет dispatch экшена для отправки ссылки восстановления
+
+    try {
+      // .unwrap() раскукоживает промис от Redux Toolkit.
+      // Если сервер ответит ошибкой (404 или 500), код сразу прыгнет в блок catch.
+      await dispatch(forgotPassword(data.identity)).unwrap();
+
+      // Если всё хорошо — выводим успех и перенаправляем
+      alert("Инструкция по сбросу пароля отправлена на ваш Email!");
+      navigate("/login");
+    } catch (error: unknown) {
+      console.error("Полная ошибка с сервера в компоненте:", error);
+
+      // Приводим к объекту, у которого может быть необязательное свойство message
+      const typedError = error as { message?: string };
+
+      const errorMessage =
+        typedError?.message ||
+        "Ошибка сервера (500). Проверьте терминал бэкенда!";
+      alert(`Произошла ошибка: ${errorMessage}`);
+    }
   };
 
   return (
@@ -62,7 +90,7 @@ const ResetPage: React.FC = () => {
             sx={{
               pt: "24px",
               px: "40px",
-              pb: "0px", // Нижняя кнопка будет прижата к краю
+              pb: "0px",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -161,7 +189,7 @@ const ResetPage: React.FC = () => {
                   fontSize: "14px",
                   boxShadow: "none",
                   mb: "40px",
-                  "& :hover": { bgcolor: "#1877f2", boxShadow: "none" },
+                  "&:hover": { bgcolor: "#1877f2", boxShadow: "none" },
                 }}
               >
                 Reset your password
@@ -211,7 +239,7 @@ const ResetPage: React.FC = () => {
             {/* НИЖНЯЯ КНОПКА НАЗАД К ЛОГИНУ */}
             <Box
               sx={{
-                width: "calc(100% + 80px)", // компенсируем padding родителя (px: 40px)
+                width: "calc(100% + 80px)",
                 mx: "-40px",
                 height: "44px",
                 bgcolor: "#fafafa",

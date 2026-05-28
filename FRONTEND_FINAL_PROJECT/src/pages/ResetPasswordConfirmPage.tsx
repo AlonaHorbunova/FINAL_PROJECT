@@ -9,7 +9,10 @@ import {
   Paper,
   Typography,
   Alert,
+  IconButton,
+  InputAdornment,
 } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material"; // Импортируем иконки глазика
 import { useAppDispatch } from "../redux/hooks";
 import { resetPasswordAction } from "../redux/auth/authSlice";
 
@@ -27,6 +30,10 @@ const ResetPasswordConfirmPage: React.FC = () => {
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  // Состояния для управления видимостью паролей
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register,
@@ -101,31 +108,64 @@ const ResetPasswordConfirmPage: React.FC = () => {
           onSubmit={handleSubmit(onSubmit)}
           sx={{ width: "100%" }}
         >
-          <TextField
-            {...register("password", {
-              required: "Введите новый пароль",
-              minLength: { value: 6, message: "Минимум 6 символов" },
-            })}
-            fullWidth
-            type="password"
-            placeholder="New Password"
-            error={!!errors.password}
-            helperText={errors.password?.message}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            {...register("confirmPassword", {
-              required: "Повторите пароль",
-              validate: (value) =>
-                value === passwordValue || "Пароли не совпадают",
-            })}
-            fullWidth
-            type="password"
-            placeholder="Confirm New Password"
-            error={!!errors.confirmPassword}
-            helperText={errors.confirmPassword?.message}
-            sx={{ mb: 2 }}
-          />
+          {/* Инпут 1: Новый пароль */}
+<TextField
+  {...register("password", {
+    required: "Введите новый пароль",
+    minLength: { value: 6, message: "Минимум 6 символов" },
+  })}
+  fullWidth
+  type={showPassword ? "text" : "password"}
+  placeholder="New Password"
+  error={!!errors.password}
+  helperText={errors.password?.message}
+  sx={{ mb: 2 }}
+  // МЕНЯЕМ ЗДЕСЬ: Новый синтаксис для MUI v6
+  slotProps={{
+    input: {
+      endAdornment: (
+        <InputAdornment position="end">
+          <IconButton
+            onClick={() => setShowPassword(!showPassword)}
+            edge="end"
+          >
+            {showPassword ? <VisibilityOff /> : <Visibility />}
+          </IconButton>
+        </InputAdornment>
+      ),
+    },
+  }}
+/>
+
+{/* Инпут 2: Подтверждение пароля */}
+<TextField
+  {...register("confirmPassword", {
+    required: "Повторите пароль",
+    validate: (value) =>
+      value === passwordValue || "Пароли не совпадают",
+  })}
+  fullWidth
+  type={showConfirmPassword ? "text" : "password"}
+  placeholder="Confirm New Password"
+  error={!!errors.confirmPassword}
+  helperText={errors.confirmPassword?.message}
+  sx={{ mb: 2 }}
+  // МЕНЯЕМ ЗДЕСЬ: Новый синтаксис для MUI v6
+  slotProps={{
+    input: {
+      endAdornment: (
+        <InputAdornment position="end">
+          <IconButton
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            edge="end"
+          >
+            {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+          </IconButton>
+        </InputAdornment>
+      ),
+    },
+  }}
+/>
           <Button
             type="submit"
             fullWidth

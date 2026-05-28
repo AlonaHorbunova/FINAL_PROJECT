@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"; // ИЗМЕНЕНО: Добавлен useState
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -7,11 +7,17 @@ import {
   Alert,
   Link,
   Typography,
+  IconButton, // ДОБАВЛЕНО
+  InputAdornment, // ДОБАВЛЕНО
 } from "@mui/material";
 import { useForm } from "react-hook-form";
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
 import { registerUser } from "../redux/auth/authSlice";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
+
+// БЕЗОПАСНЫЙ ИМПОРТ ИКОНОК ДЛЯ MUI v6
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
 interface RegisterFormData {
   email: string;
@@ -26,8 +32,9 @@ const RegisterPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const { loading, error, token } = useAppSelector((state) => state.auth);
 
-  // ДОБАВЛЕНО: Состояние для отслеживания успешного создания аккаунта
   const [isSuccess, setIsSuccess] = useState(false);
+  // ДОБАВЛЕНО: Состояние для показа/скрытия пароля
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -41,29 +48,22 @@ const RegisterPage: React.FC = () => {
     formState: { errors },
   } = useForm<RegisterFormData>();
 
-  // ИЗМЕНЕНО: Функция стала асинхронной (async), чтобы дождаться ответа бэкенда
   const onSubmit = async (data: RegisterFormData) => {
-    // ВАЖНО: Формируем объект СТРОГО с теми именами, которые ждет сервер
     const payload = {
       username: data.username,
       email: data.email,
       password: data.password,
-      fullName: data.fullName, // Теперь это поле будет передано
+      fullName: data.fullName,
     };
 
-    // ДОБАВЛЕНО: Блок try/catch для обработки ответа бэкенда через .unwrap()
     try {
-      // .unwrap() вытаскивает чистый результат или бросает ошибку, если бэк вернул 400/500
       await dispatch(registerUser(payload)).unwrap();
-      // Если строка выше выполнилась успешно — переключаем экран
       setIsSuccess(true);
     } catch (err) {
-      // Если бэк вернул ошибку, её поймает твой authSlice и выведет наверх, здесь просто логируем
       console.error("Ошибка при регистрации в компоненте:", err);
     }
   };
 
-  // ДОБАВЛЕНО: Новый блок разметки. Если регистрация успешна — показываем это сообщение вместо формы
   if (isSuccess) {
     return (
       <Box
@@ -154,7 +154,6 @@ const RegisterPage: React.FC = () => {
     );
   }
 
-  // Оставшаяся часть кода (форма) осталась абсолютно без изменений
   return (
     <Box
       sx={{
@@ -167,7 +166,6 @@ const RegisterPage: React.FC = () => {
       }}
     >
       <Box sx={{ display: "flex", flexDirection: "column", width: "350px" }}>
-        {/* ВЕРХНЯЯ ОСНОВНАЯ КАРТОЧКА РЕГИСТРАЦИИ */}
         <Paper
           variant="outlined"
           sx={{
@@ -207,7 +205,7 @@ const RegisterPage: React.FC = () => {
               </Alert>
             )}
 
-            {/* ИНПУТ 1: Моб. телефон или эл. адрес */}
+            {/* ИНПУТ 1: Эл. адрес */}
             <TextField
               {...register("email", { required: "Введите email или телефон" })}
               fullWidth
@@ -280,7 +278,7 @@ const RegisterPage: React.FC = () => {
               }}
             />
 
-            {/* ИНПУТ 4: Пароль */}
+            {/* ИНПУТ 4: Пароль (ИЗМЕНЕНО: Добавлен глазик) */}
             <TextField
               {...register("password", {
                 required: "Введите пароль",
@@ -289,7 +287,7 @@ const RegisterPage: React.FC = () => {
               autoComplete="new-password"
               fullWidth
               placeholder="Password"
-              type="password"
+              type={showPassword ? "text" : "password"} // Динамический тип
               size="small"
               error={!!errors.password}
               helperText={errors.password?.message}
@@ -299,15 +297,34 @@ const RegisterPage: React.FC = () => {
                   height: "36px",
                   bgcolor: "#fafafa",
                   fontSize: "12px",
+                  pr: "4px", // Небольшой отступ справа для иконки
                   "& fieldset": { borderColor: "#dbdbdb" },
                   "&:hover fieldset": { borderColor: "#dbdbdb" },
                   "&.Mui-focused fieldset": { borderColor: "#a8a8a8" },
                 },
                 "& .MuiInputBase-input": { padding: "9px 8px !important" },
               }}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? (
+                          <VisibilityOff sx={{ fontSize: "18px" }} />
+                        ) : (
+                          <Visibility sx={{ fontSize: "18px" }} />
+                        )}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }}
             />
 
-            {/* ДВА ТЕКСТОВЫХ АБЗАЦА ПО МАКЕТУ */}
             <Typography
               variant="body2"
               sx={{
@@ -357,7 +374,6 @@ const RegisterPage: React.FC = () => {
               .
             </Typography>
 
-            {/* КНОПКА ОТПРАВКИ */}
             <Button
               type="submit"
               fullWidth
@@ -379,7 +395,6 @@ const RegisterPage: React.FC = () => {
           </Box>
         </Paper>
 
-        {/* НИЖНИЙ БЛОК: ССЫЛКА НА ЛОГИН */}
         <Paper
           variant="outlined"
           sx={{

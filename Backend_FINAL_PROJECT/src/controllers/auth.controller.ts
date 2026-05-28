@@ -141,7 +141,7 @@ export const forgotPassword = async (
 
     await user.save();
 
-    // Ссылка, которая ведет на страницу твоего Фронтенда (порт 5173)
+    // Ссылка, которая ведет на страницу  Фронтенда (порт 5173)
     const resetUrl = `http://localhost:5173/reset-password-confirm/${resetToken}`;
 
     // Красивая HTML-верстка для письма
@@ -196,13 +196,11 @@ export const resetPassword = async (
   next: NextFunction,
 ) => {
   try {
-    // Хешируем токен из URL, чтобы сравнить с тем, что лежит в базе
     const hashedToken = crypto
       .createHash("sha256")
       .update(req.params.token as string)
       .digest("hex");
 
-    // Ищем юзера, у которого совпадает токен и время действия ($gt — больше текущего времени)
     const user = await User.findOne({
       resetPasswordToken: hashedToken,
       resetPasswordExpires: { $gt: new Date() },
@@ -214,10 +212,10 @@ export const resetPassword = async (
         .json({ message: "Ссылка устарела или недействительна." });
     }
 
-    // Записываем новый пароль (Mongoose должен его захешировать через bcrypt в pre('save'), если это настроено)
-    user.password = req.body.password;
+    // ХЕШИРУЕМ ПАРОЛЬ ПЕРЕД СОХРАНЕНИЕМ! (Исправили ошибку)
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(req.body.password, salt);
 
-    // Очищаем временные поля токена
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
 
