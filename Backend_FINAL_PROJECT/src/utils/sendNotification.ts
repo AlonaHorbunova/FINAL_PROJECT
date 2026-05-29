@@ -6,12 +6,11 @@ interface INotificationData {
   receiver: string;
   issuer: string;
   type: "like" | "comment" | "follow";
-  post?: string; // 🔥 Сделали строго string, чтобы Express-параметры не ругались
+  post?: string;
 }
 
 export const sendNotification = async (data: INotificationData) => {
   try {
-    // Создаем уведомление в базе, оборачивая строки в ObjectId
     const newNotification = await Notification.create({
       receiver: new Types.ObjectId(data.receiver),
       issuer: new Types.ObjectId(data.issuer),
@@ -25,7 +24,6 @@ export const sendNotification = async (data: INotificationData) => {
       "username avatar",
     );
 
-    // Отправляем по сокетам
     if (io) {
       io.to(data.receiver).emit("new_notification", populated);
       console.log(

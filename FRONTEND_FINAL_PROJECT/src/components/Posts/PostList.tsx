@@ -5,7 +5,7 @@ import { IPost } from "../../types/index";
 
 interface PostListProps {
   posts: IPost[];
-  onOpenModal: (post: IPost) => void; // ИСПРАВЛЕНО: убрали '?', теперь проп обязательный
+  onOpenModal: (post: IPost) => void;
 }
 
 const PostList: React.FC<PostListProps> = ({ posts, onOpenModal }) => {

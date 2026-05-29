@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Typography, CircularProgress, Box, Link } from "@mui/material";
+import { Typography, CircularProgress, Box } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
 import { fetchPosts } from "../redux/posts/postsSlice";
 import { IPost } from "../types";
 import PostCard from "../components/Posts/PostCard";
 import PostDetailModal from "../components/Posts/PostDetailModal";
+import Footer from "../components/Footer";
 
 type SafePost = IPost & {
   id?: string | number;
@@ -104,62 +105,9 @@ const HomePage: React.FC = () => {
         )}
       </Box>
 
-      <Box
-        component="footer"
-        sx={{
-          width: "100%",
-          height: "158px",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: "16px",
-          borderTop: "1px solid #dbdbdb",
-          bgcolor: "#ffffff",
-          px: 4,
-          boxSizing: "border-box",
-          mt: "auto",
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            gap: "16px",
-            flexWrap: "wrap",
-            justifyContent: "center",
-          }}
-        >
-          {[
-            "Home",
-            "Search",
-            "Explore",
-            "Messages",
-            "Notifications",
-            "Create",
-            "Profile",
-          ].map((item) => (
-            <Link
-              key={item}
-              href="#"
-              sx={{
-                fontSize: "12px",
-                color: "#737373",
-                textDecoration: "none",
-                fontWeight: "500",
-                "&:hover": { textDecoration: "underline" },
-              }}
-            >
-              {item}
-            </Link>
-          ))}
-        </Box>
+      {/* Теперь здесь компактный компонент футера */}
+      <Footer />
 
-        <Typography variant="body2" sx={{ fontSize: "12px", color: "#737373" }}>
-          © {new Date().getFullYear()} ICHGRAM FROM ICH PRO
-        </Typography>
-      </Box>
-
-      {/* ИСПРАВЛЕНО: Свойство называется open */}
       <PostDetailModal
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}

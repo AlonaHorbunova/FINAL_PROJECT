@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 
-// Импорты с правильными путями к твоей папке redux
 import { forgotPassword } from "../redux/auth/authSlice";
 import { AppDispatch } from "../redux/store";
 
@@ -28,11 +27,8 @@ const ResetPage: React.FC = () => {
     console.log("Данные для сброса пароля:", data);
 
     try {
-      // .unwrap() раскукоживает промис от Redux Toolkit.
-      // Если сервер ответит ошибкой (404 или 500), код сразу прыгнет в блок catch.
       await dispatch(forgotPassword(data.identity)).unwrap();
 
-      // Если всё хорошо — выводим успех и перенаправляем
       alert("Инструкция по сбросу пароля отправлена на ваш Email!");
       navigate("/login");
     } catch (error: unknown) {

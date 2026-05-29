@@ -15,8 +15,8 @@ import commentRoutes from "./routes/comment.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import messageRoutes from "./routes/message.routes.js";
+import { fileURLToPath } from "url";
 import path from "path";
-import { fileURLToPath } from "url"; // Добавили стандартный модуль для работы с URL
 
 const startServer = (): void => {
   const app: Application = express();
@@ -33,7 +33,6 @@ const startServer = (): void => {
 
   // ИСПРАВЛЕНИЕ: Безопасный способ получить путь к текущей папке в ES-модулях без __dirname
   const __filename = fileURLToPath(import.meta.url);
-  const currentDir = path.dirname(__filename);
 
   app.use(
     "/uploads",

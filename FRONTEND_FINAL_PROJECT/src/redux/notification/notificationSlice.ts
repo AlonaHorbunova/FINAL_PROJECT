@@ -5,7 +5,7 @@ import { IUser } from "../../types";
 export interface INotification {
   _id: string;
   receiver: string;
-  issuer: IUser; // Кто совершил действие (подгрузится объект с username и avatar)
+  issuer: IUser; 
   type: "like" | "comment" | "follow";
   post?: string;
   isRead: boolean;
@@ -24,13 +24,13 @@ const initialState: NotificationState = {
   error: null,
 };
 
-// Экшен для начальной загрузки истории уведомлений из базы при старте
+
 export const fetchNotificationsThunk = createAsyncThunk<INotification[], void>(
   "notifications/fetchAll",
   async (_, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.get("/notifications");
-      // Возвращаем массив (если бэк возвращает { notifications: [...] }, то пиши response.data.notifications)
+     
       return Array.isArray(response.data)
         ? response.data
         : response.data.notifications || [];
@@ -52,11 +52,11 @@ const notificationSlice = createSlice({
   name: "notifications",
   initialState,
   reducers: {
-    // 🔥 Экшен для добавления уведомления, прилетевшего по сокетам прямо сейчас
+    
     addNotification: (state, action: PayloadAction<INotification>) => {
       state.notifications.unshift(action.payload); // Добавляем в самый верх списка
     },
-    // Очистка уведомлений при логауте
+    
     clearNotifications: (state) => {
       state.notifications = [];
     },

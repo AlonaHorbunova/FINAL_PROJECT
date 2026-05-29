@@ -11,11 +11,9 @@ import { getRandomPosts } from "../controllers/posts.controller.js";
 
 const router = Router();
 
-// Маршрут для получения всех постов (доступен всем)
 router.get("/", getAllPosts as unknown as RequestHandler);
 router.get("/random", getRandomPosts);
 
-// Маршрут для создания поста
 router.post(
   "/",
   authMiddleware as unknown as RequestHandler,

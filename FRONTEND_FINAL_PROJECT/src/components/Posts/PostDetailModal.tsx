@@ -166,7 +166,6 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
             )}
 
             {livePost.comments?.map((c: IComment) => {
-              // Вместо 'any' используем 'unknown' для безопасного приведения
               const rawUser = c.user as unknown;
 
               // Проверяем, является ли пользователь объектом с username

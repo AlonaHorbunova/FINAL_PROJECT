@@ -18,7 +18,6 @@ export interface IComment {
   createdAt: string;
 }
 
-// 3. Обновим пост
 export interface IPost {
   _id: string;
   imageUrl: string;
@@ -29,7 +28,6 @@ export interface IPost {
   createdAt: string;
 }
 
-// 4. Добавим тип для сообщения в чате (у тебя уже есть папка Chat)
 export interface IMessage {
   _id: string;
   chatId: string;

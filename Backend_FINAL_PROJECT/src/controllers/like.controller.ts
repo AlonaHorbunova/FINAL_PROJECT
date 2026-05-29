@@ -20,7 +20,7 @@ export const toggleLike = async (
   try {
     const authReq = req as AuthRequest;
 
-    // 🔥 Превращаем параметры строго в строки, чтобы убрать ошибку 'string | string[]'
+    
     const postId = authReq.params.postId as string;
     const userId = authReq.user?.id as string;
 
@@ -44,7 +44,7 @@ export const toggleLike = async (
       const newLike = new Like(filter);
       await newLike.save();
 
-      // Живое уведомление через утилиту (если лайк не самому себе)
+      
       if (post && post.author && post.author.toString() !== userId) {
         await sendNotification({
           receiver: post.author.toString(),

@@ -1,12 +1,10 @@
 import type { Response, NextFunction } from "express";
-// Добавляем type перед AuthRequest, чтобы успокоить verbatimModuleSyntax
 import type { AuthRequest } from "../middlewares/authMiddleware.js";
 import { User } from "../db/models/User.js";
 import { CustomError } from "../utils/CustomError.js";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"; // ИЗМЕНЕНИЕ: Импорт AWS SDK вместо path и fs
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"; 
 import sharp from "sharp";
 
-// Описываем строгий интерфейс для входящих текстовых полей формы
 interface UpdateProfileInput {
   username?: string;
   fullName?: string;
@@ -15,7 +13,7 @@ interface UpdateProfileInput {
   avatar?: string;
 }
 
-// ИЗМЕНЕНИЕ: Настройка клиента AWS S3 для работы с бакетом
+// Настройка клиента AWS S3 для работы с бакетом
 const s3 = new S3Client({
   region: "eu-central-1",
   credentials: {
@@ -26,7 +24,7 @@ const s3 = new S3Client({
 
 const BUCKET_NAME = "my-finalproject-insta-bucket-2026";
 
-// 1. Получить профиль текущего (авторизованного) пользователя (БЕЗ ИЗМЕНЕНИЙ)
+// 1. Получить профиль текущего (авторизованного) пользователя 
 export const getMe = async (
   req: AuthRequest,
   res: Response,
@@ -42,7 +40,7 @@ export const getMe = async (
   }
 };
 
-// 2. Получить профиль любого пользователя по его ID (БЕЗ ИЗМЕНЕНИЙ)
+// 2. Получить профиль любого пользователя по его ID 
 export const getUserById = async (
   req: AuthRequest,
   res: Response,
@@ -72,13 +70,13 @@ export const updateProfile = async (
       throw new CustomError("Недостаточно прав", 401);
     }
 
-    // Безопасно забираем текстовые данные из тела запроса (БЕЗ ИЗМЕНЕНИЙ)
+    // Безопасно забираем текстовые данные из тела запроса 
     const { username, fullName, bio, website } = req.body as UpdateProfileInput;
 
-    // Сборка объекта обновлений с типом Partial (без any!) (БЕЗ ИЗМЕНЕНИЙ)
+    // Сборка объекта обновлений с типом Partial 
     const updateData: Partial<UpdateProfileInput> = {};
 
-    // Записываем данные, только если это реальные строки и они не равны "undefined" (БЕЗ ИЗМЕНЕНИЙ)
+    // Записываем данные, только если это реальные строки и они не равны "undefined" 
     if (
       typeof username === "string" &&
       username.trim() !== "" &&
@@ -102,35 +100,35 @@ export const updateProfile = async (
 
     // Если в форме было прикреплено новое изображение (Аватарка)
     if (req.file) {
-      // ИЗМЕНЕНИЕ: Формируем имя файла для папки avatars внутри AWS S3
+      //  Формируем имя файла для папки avatars внутри AWS S3
       const fileName = `avatars/avatar-${userId}-${Date.now()}.webp`;
 
-      // ИЗМЕНЕНИЕ: Сжимаем аватарку в аккуратный квадрат 200x200 напрямую в буфер памяти
+      //  Сжимаем аватарку в аккуратный квадрат 200x200 напрямую в буфер памяти
       const optimizedAvatarBuffer = await sharp(req.file.buffer)
         .resize(200, 200, { fit: "cover" })
         .webp({ quality: 80 })
         .toBuffer();
 
-      // ИЗМЕНЕНИЕ: Отправляем сжатый буфер в облако Amazon S3
+      //  Отправляем сжатый буфер в облако Amazon S3
       await s3.send(
         new PutObjectCommand({
           Bucket: BUCKET_NAME,
           Key: fileName,
           Body: optimizedAvatarBuffer,
-          ContentType: "image/webp", // Чтобы браузер корректно рендерил картинку по ссылке
+          ContentType: "image/webp", 
         }),
       );
 
-      // ИЗМЕНЕНИЕ: Записываем в базу данных полную прямую ссылку на AWS S3
+      //  Записываем в базу данных полную прямую ссылку на AWS S3
       updateData.avatar = `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/${fileName}`;
     }
 
-    // Если в итоге обновлять нечего (БЕЗ ИЗМЕНЕНИЙ)
+    
     if (Object.keys(updateData).length === 0) {
       throw new CustomError("Нет данных для обновления", 400);
     }
 
-    // Сохраняем все изменения в базу одной транзакцией (БЕЗ ИЗМЕНЕНИЙ)
+    // Сохраняем все изменения в базу одной транзакцией 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $set: updateData },
@@ -158,7 +156,7 @@ export const followUser = async (
     if (myId === targetId)
       throw new CustomError("Нельзя подписаться на самого себя", 400);
 
-    // Добавляем ID в массивы (подразумевается, что у тебя в модели User есть эти поля)
+    
     await User.findByIdAndUpdate(myId, { $addToSet: { following: targetId } });
     await User.findByIdAndUpdate(targetId, { $addToSet: { followers: myId } });
 
@@ -183,7 +181,7 @@ export const searchUsers = async (
     }
 
     // Ищем пользователей, чьи username или fullName подходят под паттерн
-    // $ne: myId — убирает текущего авторизованного пользователя из результатов поиска
+    
     const users = await User.find({
       _id: { $ne: myId },
       $or: [
@@ -191,8 +189,8 @@ export const searchUsers = async (
         { fullName: { $regex: query.trim(), $options: "i" } },
       ],
     })
-      .select("username fullName avatar") // Берем только нужные для отображения поля
-      .limit(10); // Ограничиваем выдачу 10 пользователями, чтобы не грузить базу
+      .select("username fullName avatar") 
+      .limit(10); 
 
     res.json({ users });
   } catch (error) {

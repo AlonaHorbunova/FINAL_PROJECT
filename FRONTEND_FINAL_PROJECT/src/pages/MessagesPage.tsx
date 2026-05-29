@@ -21,7 +21,7 @@ import {
   addMessage,
   fetchMessages,
   fetchConversations,
-  markAsRead, // Добавлено
+  markAsRead, 
 } from "../redux/chat/chatSlice";
 import { fetchUserById, clearProfile } from "../redux/user/userSlice";
 import { socket } from "../api/socket";
@@ -117,7 +117,7 @@ const MessagesPage: React.FC = () => {
     socket.emit("send_message", messageData);
     dispatch(addMessage(messageData as unknown as Message));
     setMessageText("");
-    // УБРАЛИ setTimeout, он больше не нужен
+    
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

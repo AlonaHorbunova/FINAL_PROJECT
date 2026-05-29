@@ -9,11 +9,10 @@ export default function errorHandler(
 ) {
   console.error("Ошибка на сервере:", error);
 
-  // Определяем статус-код
-  // Если это наш CustomError, берем его статус. Иначе — 500.
+  
   const statusCode = error instanceof CustomError ? error.statusCode : 500;
 
-  // Определяем сообщение
+  
   const message =
     error instanceof Error ? error.message : "Внутренняя ошибка сервера";
 

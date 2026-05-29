@@ -2,7 +2,6 @@ import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { CustomError } from "../utils/CustomError.js";
 
-// Создаем один общий интерфейс для всего проекта
 export interface AuthRequest extends Request {
   user?: {
     id: string;
@@ -11,7 +10,6 @@ export interface AuthRequest extends Request {
   };
 }
 
-// Интерфейс для того, что лежит внутри токена
 interface DecodedToken {
   id: string;
   username: string;
@@ -19,7 +17,7 @@ interface DecodedToken {
 }
 
 export const authMiddleware = (
-  req: AuthRequest, // Используем наш новый интерфейс
+  req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) => {
@@ -31,7 +29,6 @@ export const authMiddleware = (
 
     const token = authHeader.split(" ")[1];
 
-    // Проверка: если токен не нашелся в строке, кидаем ошибку
     if (!token) {
       throw new CustomError("Токен не предоставлен", 401);
     }

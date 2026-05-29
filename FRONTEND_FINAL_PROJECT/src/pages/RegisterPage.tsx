@@ -7,15 +7,14 @@ import {
   Alert,
   Link,
   Typography,
-  IconButton, // ДОБАВЛЕНО
-  InputAdornment, // ДОБАВЛЕНО
+  IconButton,
+  InputAdornment,
 } from "@mui/material";
 import { useForm } from "react-hook-form";
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
 import { registerUser } from "../redux/auth/authSlice";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 
-// БЕЗОПАСНЫЙ ИМПОРТ ИКОНОК ДЛЯ MUI v6
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
@@ -33,7 +32,7 @@ const RegisterPage: React.FC = () => {
   const { loading, error, token } = useAppSelector((state) => state.auth);
 
   const [isSuccess, setIsSuccess] = useState(false);
-  // ДОБАВЛЕНО: Состояние для показа/скрытия пароля
+
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
@@ -297,7 +296,7 @@ const RegisterPage: React.FC = () => {
                   height: "36px",
                   bgcolor: "#fafafa",
                   fontSize: "12px",
-                  pr: "4px", // Небольшой отступ справа для иконки
+                  pr: "4px",
                   "& fieldset": { borderColor: "#dbdbdb" },
                   "&:hover fieldset": { borderColor: "#dbdbdb" },
                   "&.Mui-focused fieldset": { borderColor: "#a8a8a8" },

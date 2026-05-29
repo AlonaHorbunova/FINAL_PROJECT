@@ -20,7 +20,7 @@ import {
 import {
   fetchNotificationsThunk,
   addNotification,
-  INotification, // 🔥 Импортируем тип уведомления для строгой типизации
+  INotification,
 } from "./redux/notification/notificationSlice";
 import { socket } from "./api/socket";
 
@@ -39,7 +39,7 @@ function App() {
   useEffect(() => {
     if (token && user?._id) {
       dispatch(fetchConversations());
-      dispatch(fetchNotificationsThunk()); // 🔥 Первично стягиваем историю уведомлений из БД
+      dispatch(fetchNotificationsThunk());
     }
   }, [token, user?._id, dispatch]);
 
@@ -57,18 +57,18 @@ function App() {
         dispatch(addMessage(message));
       };
 
-      // 🔥 Слушатель новых уведомлений (Лайки, комменты, подписки)
+      //  Слушатель новых уведомлений (Лайки, комменты, подписки)
       const handleNewNotification = (notification: INotification) => {
         console.log("🔔 [Глобальный Сокет] Поймал уведомление:", notification);
         dispatch(addNotification(notification));
       };
 
       socket.on("new_message", handleNewMessage);
-      socket.on("new_notification", handleNewNotification); // 🔥 Начинаем слушать бэкенд
+      socket.on("new_notification", handleNewNotification);
 
       return () => {
         socket.off("new_message", handleNewMessage);
-        socket.off("new_notification", handleNewNotification); // 🔥 Чистим за собой при размонтировании
+        socket.off("new_notification", handleNewNotification);
       };
     }
   }, [userId, dispatch]);

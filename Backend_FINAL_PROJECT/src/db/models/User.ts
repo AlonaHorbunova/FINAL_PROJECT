@@ -1,6 +1,5 @@
 import { Schema, model, Document, Types } from "mongoose";
 
-// 1. Описываем интерфейс
 export interface IUser {
   _id: Types.ObjectId;
   username: string;
@@ -12,12 +11,10 @@ export interface IUser {
   website?: string;
   createdAt?: Date;
   updatedAt?: Date;
-  // Добавили сюда:
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
 }
 
-// 2. Описываем схему для MongoDB
 const userSchema = new Schema<IUser>(
   {
     username: { type: String, required: true, unique: true },
@@ -34,5 +31,4 @@ const userSchema = new Schema<IUser>(
   { timestamps: true },
 );
 
-// 3. Создаем и экспортируем модель
 export const User = model<IUser>("User", userSchema);

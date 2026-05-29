@@ -1,10 +1,10 @@
 import jwt from "jsonwebtoken";
-import { type IUser } from "../db/models/User.js"; // Импортируем наш интерфейс
+import { type IUser } from "../db/models/User.js"; 
 
 const generateToken = (user: IUser): string => {
-  // Мы берем только необходимые данные, чтобы токен не был слишком тяжелым
+ 
   const payload = {
-    id: user._id, // В MongoDB это ObjectId, jwt преобразует его в строку
+    id: user._id, 
     username: user.username,
     email: user.email,
   };
@@ -16,7 +16,7 @@ const generateToken = (user: IUser): string => {
   }
 
   return jwt.sign(payload, secret, {
-    expiresIn: "30d", // Токен будет жить 30 дней
+    expiresIn: "30d", 
   });
 };
 

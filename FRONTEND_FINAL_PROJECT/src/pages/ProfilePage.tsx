@@ -18,6 +18,7 @@ import {
 import { fetchPosts } from "../redux/posts/postsSlice";
 import EditProfileModal from "../components/Profile/EditProfileModal";
 import PostDetailModal from "../components/Posts/PostDetailModal";
+import Footer from "../components/Footer"; // <-- ИСПРАВЛЕННЫЙ ПУТЬ
 import { IUser, IPost } from "../types";
 
 const ProfilePage: React.FC = () => {
@@ -385,6 +386,9 @@ const ProfilePage: React.FC = () => {
           </>
         )}
       </Box>
+
+      {/* ФУТЕР ДОБАВЛЕН ЗДЕСЬ */}
+      <Footer />
 
       {profileUser && (
         <EditProfileModal

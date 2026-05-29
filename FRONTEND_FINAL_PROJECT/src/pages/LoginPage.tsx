@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"; // ИЗМЕНЕНО: Добавлен useState
+import React, { useEffect, useState } from "react"; 
 import {
   Box,
   Button,
@@ -7,8 +7,8 @@ import {
   Alert,
   Link,
   Typography,
-  IconButton, // ДОБАВЛЕНО
-  InputAdornment, // ДОБАВЛЕНО
+  IconButton, 
+  InputAdornment, 
 } from "@mui/material";
 import { useForm } from "react-hook-form";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
@@ -172,7 +172,7 @@ const LoginPage: React.FC = () => {
                   height: "36px",
                   bgcolor: "#fafafa",
                   fontSize: "12px",
-                  pr: "4px", // Смещение для размещения иконки внутри 36px
+                  pr: "4px", 
                   "& fieldset": { borderColor: "#dbdbdb" },
                   "&:hover fieldset": { borderColor: "#dbdbdb" },
                   "&.Mui-focused fieldset": { borderColor: "#a8a8a8" },

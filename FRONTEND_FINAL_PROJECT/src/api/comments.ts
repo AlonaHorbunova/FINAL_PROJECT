@@ -1,4 +1,3 @@
-// src/api/comments.ts
 import axiosInstance from "./axiosInstance";
 
 export const addCommentApi = async (postId: string, text: string) => {

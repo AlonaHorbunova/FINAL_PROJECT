@@ -8,7 +8,7 @@ import {
   getUserById,
   updateProfile,
   followUser,
-  searchUsers, // 🔥 Добавили импорт новой функции поиска из контроллера
+  searchUsers,
 } from "../controllers/user.controller.js";
 
 const router = Router();
@@ -16,7 +16,7 @@ const router = Router();
 // 1. Получить профиль текущего юзера
 router.get("/me", authMiddleware as RequestHandler, getMe as RequestHandler);
 
-// 🔥 2. РОУТ ДЛЯ ПОИСКА (Вставили строго ВЫШЕ, чем /:id)
+//  2. РОУТ ДЛЯ ПОИСКА
 router.get(
   "/search",
   authMiddleware as RequestHandler,

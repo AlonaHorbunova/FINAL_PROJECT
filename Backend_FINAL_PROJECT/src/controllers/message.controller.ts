@@ -108,7 +108,7 @@ export const getConversations = async (
 
     // Группируем по собеседнику, оставляя только последнее сообщение
     messages.forEach((msg) => {
-      // 👇 ЗАЩИТА: Если отправителя или получателя нет в базе (например, удален), пропускаем сообщение
+      
       if (!msg.sender || !msg.receiver) return;
 
       const isMe = msg.sender._id.toString() === userId;

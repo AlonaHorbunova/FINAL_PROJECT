@@ -5,7 +5,6 @@ import type { RequestHandler } from "express";
 
 const router = Router();
 
-// Получить все уведомления для залогиненного юзера
 router.get("/", authMiddleware as RequestHandler, getMyNotifications);
 
 export default router;

@@ -5,7 +5,6 @@ import type { RequestHandler } from "express";
 
 const router = Router();
 
-// Маршрут: POST /api/likes/64abc123...
 router.post("/:postId", authMiddleware as RequestHandler, toggleLike);
 
 export default router;

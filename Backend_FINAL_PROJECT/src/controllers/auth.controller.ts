@@ -60,8 +60,7 @@ export const login = async (
       throw new CustomError("Введите email и пароль", 400);
     }
 
-    // Ищем пользователя и явно просим Mongoose вернуть пароль для проверки
-    const user = await User.findOne({ email }).select("+password"); // Явно просим пароль
+    const user = await User.findOne({ email }).select("+password");
 
     if (!user || !user.password) {
       throw new CustomError("Пользователь не найден", 404);
@@ -98,7 +97,6 @@ export const getMe = async (
   next: NextFunction,
 ) => {
   try {
-    // TypeScript теперь сам знает, что у req есть .user!
     const user = await User.findById(req.user?.id).select("-password");
 
     if (!user) {
@@ -213,7 +211,6 @@ export const resetPassword = async (
         .json({ message: "Ссылка устарела или недействительна." });
     }
 
-    // ХЕШИРУЕМ ПАРОЛЬ ПЕРЕД СОХРАНЕНИЕМ! (Исправили ошибку)
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(req.body.password, salt);
 

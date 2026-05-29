@@ -184,7 +184,7 @@ const authSlice = createSlice({
       })
       .addCase(getMe.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload; // Сюда прилетает полноценный юзер с бэкенда
+        state.user = action.payload; 
       })
       .addCase(getMe.rejected, (state, action) => {
         state.loading = false;

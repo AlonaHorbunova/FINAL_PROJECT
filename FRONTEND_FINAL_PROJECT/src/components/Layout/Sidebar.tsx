@@ -208,8 +208,8 @@ const Sidebar: React.FC = () => {
         sx={{
           "& .MuiBackdrop-root": { left: 244 },
           "& .MuiDrawer-paper": {
-            width: 637, // 🔥 Вернули твою оригинальную ширину
-            pl: "274px", // 🔥 Вернули твой оригинальный отступ
+            width: 637, 
+            pl: "274px", 
             pr: 4,
             pt: 4,
             borderRight: "1px solid #dbdbdb",

@@ -19,7 +19,6 @@ const bootstrap = async (): Promise<void> => {
     await connectDB();
     startServer();
   } catch (error: unknown) {
-    // Проверяем, является ли error объектом с полем message (безопасное приведение)
     if (error instanceof Error) {
       console.error("Ошибка при запуске приложения:", error.message);
     } else {

@@ -6,14 +6,14 @@ import { IUser } from "../../types";
 
 interface UserState {
   profileUser: IUser | null;
-  searchResults: IUser[]; // 🔥 Добавили поле для хранения результатов поиска
+  searchResults: IUser[]; 
   loading: boolean;
   error: string | null;
 }
 
 const initialState: UserState = {
   profileUser: null,
-  searchResults: [], // Изначально поиск пустой
+  searchResults: [],
   loading: false,
   error: null,
 };
@@ -50,7 +50,7 @@ export const fetchUserById = createAsyncThunk<IUser, string>(
   },
 );
 
-// 🔥 Новое асинхронное действие для живого поиска пользователей
+// Асинхронное действие для живого поиска пользователей
 export const searchUsersThunk = createAsyncThunk<IUser[], string>(
   "user/searchUsers",
   async (query, { rejectWithValue }) => {
@@ -98,7 +98,7 @@ const userSlice = createSlice({
       state.profileUser = null;
       state.error = null;
     },
-    // 🔥 Очистка результатов поиска, когда закрываем шторку
+    
     clearSearchResults: (state) => {
       state.searchResults = [];
     },
@@ -135,7 +135,7 @@ const userSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // 🔥 Живой поиск пользователей
+      //  Живой поиск пользователей
       .addCase(searchUsersThunk.fulfilled, (state, action) => {
         state.searchResults = action.payload;
       })

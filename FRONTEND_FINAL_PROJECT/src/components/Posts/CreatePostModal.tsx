@@ -48,7 +48,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ open, onClose }) => {
 
   // Отправка формы (строгая типизация события формы)
   const handleSubmit = async (e: React.SyntheticEvent): Promise<void> => {
-    e.preventDefault(); // Теперь это сработает железно без зачеркиваний
+    e.preventDefault(); 
     if (!file) return;
 
     const formData = new FormData();

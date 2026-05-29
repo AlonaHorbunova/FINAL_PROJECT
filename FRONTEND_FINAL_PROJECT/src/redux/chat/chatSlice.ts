@@ -71,16 +71,16 @@ const chatSlice = createSlice({
         if (optimisticIndex !== -1) {
           state.items[optimisticIndex] = incoming;
         } else {
-          // Если дубликат ID — ничего не делаем
+          
           if (state.items.some((msg) => msg._id === incoming._id)) return;
           state.items.push(incoming);
         }
       } else {
-        // Если нет ID (новое исходящее) — просто пушим
+        
         state.items.push(incoming);
       }
 
-      // 1. Ищем чат, где sender или receiver совпадает с пользователем чата
+      
       const conversation = state.conversations.find(
         (c) =>
           c.user._id === incoming.sender._id ||
@@ -88,10 +88,10 @@ const chatSlice = createSlice({
       );
 
       if (conversation) {
-        // 2. Всегда обновляем последнее сообщение
+        
         conversation.lastMessage = incoming.text;
 
-        // 3. Увеличиваем счетчик только если отправитель НЕ является текущим пользователем
+        
         if (conversation.user._id === incoming.sender._id) {
           conversation.unreadCount = (conversation.unreadCount || 0) + 1;
         }
@@ -111,7 +111,7 @@ const chatSlice = createSlice({
       .addCase(fetchMessages.fulfilled, (state, action) => {
         state.items = action.payload;
       })
-      // 🔥 Вот сюда мы аккуратно вставили обновленный кейс:
+      
       .addCase(fetchConversations.fulfilled, (state, action) => {
         // Просто сохраняем то, что прислал бэк (включая unreadCount из базы)
         state.conversations = action.payload;

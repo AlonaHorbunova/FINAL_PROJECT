@@ -15,7 +15,6 @@ export const addComment = async (
   try {
     const authReq = req as AuthRequest;
 
-    // 🔥 Строго фиксируем строки
     const postId = authReq.params.postId as string;
     const userId = authReq.user?.id as string;
     const { text } = req.body;
@@ -40,7 +39,6 @@ export const addComment = async (
       text,
     });
 
-    // Живое уведомление через утилиту
     if (postAuthorId !== userId) {
       await sendNotification({
         receiver: postAuthorId,

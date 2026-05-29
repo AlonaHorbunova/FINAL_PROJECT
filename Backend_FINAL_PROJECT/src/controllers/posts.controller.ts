@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { Post } from "../db/models/Post.js";
-import { Like } from "../db/models/Like.js"; // Добавили модель лайков для склейки
-import { Comment } from "../db/models/Comment.js"; // Добавили модель комментов для склейки
+import { Like } from "../db/models/Like.js";
+import { Comment } from "../db/models/Comment.js";
 import { CustomError } from "../utils/CustomError.js";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import sharp from "sharp";
@@ -12,7 +12,7 @@ interface AuthRequest extends Request {
   file?: Express.Multer.File;
 }
 
-// Инициализация клиента AWS S3 (использует переменные из .env)
+// Инициализация клиента AWS S3
 const s3 = new S3Client({
   region: "eu-central-1",
   credentials: {
@@ -94,7 +94,7 @@ export const createPost = async (
         Bucket: BUCKET_NAME,
         Key: fileName,
         Body: optimizedImageBuffer,
-        ContentType: "image/webp", // Чтобы браузер открывал фото, а не скачивал
+        ContentType: "image/webp",
       }),
     );
 
@@ -103,7 +103,6 @@ export const createPost = async (
 
     console.log("Попытка сохранить пост с данными в AWS:");
 
-    // Сохранение записи строго по схеме
     const newPost = new Post({
       author: req.user.id,
       imageUrl: s3ImageUrl,
@@ -115,7 +114,6 @@ export const createPost = async (
 
     await newPost.save();
 
-    // Подтягиваем автора для ответа
     const populatedPost = await Post.findById(newPost._id).populate(
       "author",
       "username avatar",
@@ -165,7 +163,7 @@ export const deletePost = async (
 export const getRandomPosts = async (
   req: Request,
   res: Response,
-  next: NextFunction, // Добавили next
+  next: NextFunction, 
 ) => {
   try {
     // 1. Получаем случайные посты
@@ -199,6 +197,6 @@ export const getRandomPosts = async (
 
     res.json(postsWithDetails);
   } catch (err) {
-    next(err); // Правильная передача ошибки
+    next(err); 
   }
 };
