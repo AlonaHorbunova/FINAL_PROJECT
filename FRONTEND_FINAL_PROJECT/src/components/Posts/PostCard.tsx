@@ -1,5 +1,5 @@
-import React from "react";
-import { useNavigate } from "react-router-dom"; // ИМПОРТИРУЕМ NAVIGATE
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardHeader,
@@ -8,6 +8,8 @@ import {
   Avatar,
   Typography,
   IconButton,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import {
   MoreVert as MoreVertIcon,
@@ -16,11 +18,12 @@ import {
   ChatBubbleOutlined as ChatBubbleOutlineIcon,
   Send as PaperPlaneIcon,
   BookmarkBorder as BookmarkBorderIcon,
+  Delete as DeleteIcon,
 } from "@mui/icons-material";
 import { Box } from "@mui/system";
 import { IPost } from "../../types/index";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
-import { toggleLikePost } from "../../redux/posts/postsSlice";
+import { toggleLikePost, deletePost } from "../../redux/posts/postsSlice";
 
 interface PostCardProps {
   post: IPost;
@@ -29,47 +32,51 @@ interface PostCardProps {
 
 const PostCard: React.FC<PostCardProps> = ({ post, onOpenModal }) => {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate(); // ИНИЦИАЛИЗИРУЕМ НАВИГАЦИЮ
+  const navigate = useNavigate();
   const BACKEND_URL = "http://localhost:3000";
 
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const currentUser = useAppSelector((state) => state.auth.user);
+
+  const authorId =
+    typeof post.author === "object" ? post.author?._id : post.author;
+  const isOwner = currentUser?._id === authorId;
 
   const isLiked = currentUser
     ? (post.likes || []).includes(currentUser._id)
     : false;
 
-  const handleLike = () => {
-    if (!currentUser?._id) {
-      console.error("Лайк невозможен: пользователь не авторизован");
-      return;
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) =>
+    setAnchorEl(event.currentTarget);
+  const handleMenuClose = () => setAnchorEl(null);
+
+  const handleDelete = () => {
+    if (window.confirm("Удалить этот пост?")) {
+      dispatch(deletePost(post._id));
     }
+    handleMenuClose();
+  };
+
+  const handleLike = () => {
+    if (!currentUser?._id) return;
     dispatch(toggleLikePost({ postId: post._id, userId: currentUser._id }));
   };
 
-  // Метод для перехода на профиль автора
   const handleNavigateToProfile = () => {
-    const authorId =
-      typeof post.author === "object" ? post.author?._id : post.author;
-    if (!authorId) return;
+  if (!authorId) return;
 
-    // Если это наш собственный пост — ведем на наш профиль, иначе на чужой
-    if (authorId === currentUser?._id) {
-      navigate("/profile");
-    } else {
-      navigate(`/profile/${authorId}`);
-    }
-  };
+  if (authorId === currentUser?._id) {
+    navigate("/profile");
+  } else {
+    navigate(`/profile/${authorId}`);
+  }
+};
 
   const getFullUrl = (urlPath: string | undefined) => {
     if (!urlPath) return "";
     if (urlPath.startsWith("http")) return urlPath;
-    const cleanPath = urlPath.startsWith("/") ? urlPath : `/${urlPath}`;
-    return `${BACKEND_URL}${cleanPath}`;
+    return `${BACKEND_URL}${urlPath.startsWith("/") ? urlPath : `/${urlPath}`}`;
   };
-
-  const postImageUrl = getFullUrl(post.imageUrl);
-  const authorAvatar = getFullUrl(post.author?.avatar);
-  const authorName = post.author?.username || "Пользователь";
 
   return (
     <Card
@@ -85,27 +92,36 @@ const PostCard: React.FC<PostCardProps> = ({ post, onOpenModal }) => {
       <CardHeader
         avatar={
           <Avatar
-            src={authorAvatar}
-            alt={authorName}
-            onClick={handleNavigateToProfile} // ПЕРЕХОД ПО КЛИКУ НА АВАТАР
-            sx={{
-              width: 32,
-              height: 32,
-              bgcolor: "#efefef",
-              cursor: "pointer",
-            }}
+            src={getFullUrl(post.author?.avatar)}
+            alt={post.author?.username}
+            onClick={handleNavigateToProfile}
+            sx={{ width: 32, height: 32, cursor: "pointer" }}
           >
-            {authorName[0]?.toUpperCase()}
+            {post.author?.username?.[0]?.toUpperCase()}
           </Avatar>
         }
         action={
-          <IconButton>
-            <MoreVertIcon />
-          </IconButton>
+          <>
+            <IconButton onClick={handleMenuOpen}>
+              <MoreVertIcon />
+            </IconButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleMenuClose}
+            >
+              {isOwner && (
+                <MenuItem onClick={handleDelete} sx={{ color: "error.main" }}>
+                  <DeleteIcon fontSize="small" sx={{ mr: 1 }} /> Удалить
+                </MenuItem>
+              )}
+              <MenuItem onClick={handleMenuClose}>Отмена</MenuItem>
+            </Menu>
+          </>
         }
         title={
           <Typography
-            onClick={handleNavigateToProfile} // ПЕРЕХОД ПО КЛИКУ НА ИМЯ
+            onClick={handleNavigateToProfile}
             sx={{
               fontWeight: 600,
               fontSize: "0.9rem",
@@ -113,27 +129,25 @@ const PostCard: React.FC<PostCardProps> = ({ post, onOpenModal }) => {
               "&:hover": { textDecoration: "underline" },
             }}
           >
-            {authorName}
+            {post.author?.username || "Пользователь"}
           </Typography>
         }
         sx={{ p: 1.5 }}
       />
 
-      {postImageUrl && (
-        <CardMedia
-          component="img"
-          image={postImageUrl}
-          alt="Публикация"
-          onClick={() => onOpenModal && onOpenModal(post)}
-          sx={{
-            width: "100%",
-            aspectRatio: "1 / 1",
-            objectFit: "cover",
-            bgcolor: "#fafafa",
-            cursor: "pointer",
-          }}
-        />
-      )}
+      <CardMedia
+        component="img"
+        image={getFullUrl(post.imageUrl)}
+        alt="Публикация"
+        onClick={() => onOpenModal && onOpenModal(post)}
+        sx={{
+          width: "100%",
+          aspectRatio: "1 / 1",
+          objectFit: "cover",
+          bgcolor: "#fafafa",
+          cursor: "pointer",
+        }}
+      />
 
       <Box
         sx={{ display: "flex", justifyContent: "space-between", px: 1, pt: 1 }}
@@ -150,11 +164,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onOpenModal }) => {
             <ChatBubbleOutlineIcon sx={{ color: "#262626" }} />
           </IconButton>
           <IconButton
-            onClick={() =>
-              navigate(
-                `/messages?targetId=${typeof post.author === "object" ? post.author?._id : post.author}`,
-              )
-            }
+            onClick={() => navigate(`/messages?targetId=${authorId}`)}
           >
             <PaperPlaneIcon sx={{ color: "#262626" }} />
           </IconButton>
@@ -168,22 +178,16 @@ const PostCard: React.FC<PostCardProps> = ({ post, onOpenModal }) => {
         <Typography sx={{ fontWeight: 600, fontSize: "0.9rem", mb: 0.5 }}>
           {post.likes?.length || 0} отметок "Нравится"
         </Typography>
-
         <Typography
           variant="body2"
-          sx={{ color: "#262626", fontSize: "0.9rem", lineHeight: "1.4" }}
+          sx={{ color: "#262626", fontSize: "0.9rem" }}
         >
           <Box
             component="span"
-            onClick={handleNavigateToProfile} // ПЕРЕХОД ИЗ ОПИСАНИЯ ПОСТА
-            sx={{
-              fontWeight: 600,
-              mr: 1,
-              cursor: "pointer",
-              "&:hover": { textDecoration: "underline" },
-            }}
+            onClick={handleNavigateToProfile}
+            sx={{ fontWeight: 600, mr: 1, cursor: "pointer" }}
           >
-            {authorName}
+            {post.author?.username}
           </Box>
           {post.caption}
         </Typography>

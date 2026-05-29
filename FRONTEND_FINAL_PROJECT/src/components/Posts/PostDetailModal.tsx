@@ -9,10 +9,11 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
-import { addComment } from "../../redux/posts/postsSlice";
-// Импортируем IUser, чтобы линтер был доволен
-import { IPost, IComment, IUser } from "../../types/index";
+import { addComment, deletePost } from "../../redux/posts/postsSlice";
+import { IPost, IComment } from "../../types/index";
+import { IUser } from "../../types/index";
 
 interface PostDetailModalProps {
   open: boolean;
@@ -27,7 +28,6 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   const [commentText, setCommentText] = useState("");
-
   const currentUser = useAppSelector((state) => state.auth.user);
 
   const livePost =
@@ -39,7 +39,6 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
 
   const handleSendComment = async () => {
     if (!commentText.trim()) return;
-
     try {
       await dispatch(
         addComment({ postId: livePost._id, text: commentText.trim() }),
@@ -47,6 +46,13 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
       setCommentText("");
     } catch (err) {
       console.error("Не удалось отправить комментарий:", err);
+    }
+  };
+
+  const handleDeletePost = async () => {
+    if (window.confirm("Вы уверены, что хотите удалить этот пост?")) {
+      await dispatch(deletePost(livePost._id));
+      onClose();
     }
   };
 
@@ -88,7 +94,6 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
           outline: "none",
         }}
       >
-        {/* ЛЕВАЯ КОЛОНКА: Фотография поста */}
         <Box
           sx={{
             flex: 1.2,
@@ -108,7 +113,6 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
           )}
         </Box>
 
-        {/* ПРАВАЯ КОЛОНКА: Шапка автора, Комментарии и Поле ввода */}
         <Box
           sx={{
             width: { xs: "100%", md: "400px" },
@@ -119,124 +123,72 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
             height: { xs: "350px", md: "100%" },
           }}
         >
-          {/* Instagram-шапка автора поста */}
           <Box
             sx={{
               display: "flex",
-              alignItems: "flex-start",
-              gap: 1.5,
+              alignItems: "center",
+              justifyContent: "space-between",
               p: 2,
               borderBottom: "1px solid #efefef",
             }}
           >
-            <Avatar
-              src={postAuthorAvatar}
-              alt={livePost.author?.username || "User"}
-              sx={{ width: 36, height: 36 }}
-            />
-            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-              <Typography
-                variant="subtitle2"
-                sx={{ fontWeight: 700, color: "#262626" }}
-              >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Avatar src={postAuthorAvatar} sx={{ width: 36, height: 36 }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                 {livePost.author?.username || "Пользователь"}
               </Typography>
-
-              {/* Описание публикации */}
-              {livePost.caption && (
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: "#4a4a4a",
-                    fontSize: "13px",
-                    mt: 0.5,
-                    wordBreak: "break-word",
-                  }}
-                >
-                  {livePost.caption}
-                </Typography>
-              )}
             </Box>
-            <IconButton onClick={onClose} size="small" sx={{ mt: -0.5 }}>
-              <CloseIcon />
-            </IconButton>
+
+            <Box sx={{ display: "flex", gap: 0.5 }}>
+              {currentUser?._id === livePost.author?._id && (
+                <IconButton
+                  onClick={handleDeletePost}
+                  size="small"
+                  color="error"
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              )}
+              <IconButton onClick={onClose} size="small">
+                <CloseIcon />
+              </IconButton>
+            </Box>
           </Box>
 
-          {/* Лента комментариев */}
           <Box sx={{ flexGrow: 1, overflowY: "auto", p: 2 }}>
-            {livePost.comments && livePost.comments.length > 0 ? (
-              livePost.comments.map((c: IComment) => {
-                // ИСПРАВЛЕНО: Вместо 'any' приводим к 'unknown'.
-                // Это законный способ сделать динамическую проверку типов для ESLint.
-                const rawUser = c.user as unknown;
-                const isPopulated =
-                  rawUser &&
-                  typeof rawUser === "object" &&
-                  "username" in rawUser;
-                const commentUser = isPopulated
-                  ? (rawUser as IUser)
-                  : currentUser;
-
-                const commentAuthorAvatar = commentUser?.avatar
-                  ? commentUser.avatar.startsWith("http")
-                    ? commentUser.avatar
-                    : `http://localhost:3000/${commentUser.avatar.replace(/^\//, "")}`
-                  : "";
-
-                return (
-                  <Box
-                    key={c._id}
-                    sx={{
-                      display: "flex",
-                      alignItems: "start",
-                      gap: 1.5,
-                      mb: 2,
-                    }}
-                  >
-                    <Avatar
-                      src={commentAuthorAvatar}
-                      alt={commentUser?.username || "User"}
-                      sx={{ width: 32, height: 32, fontSize: "12px" }}
-                    />
-                    <Box sx={{ pt: 0.5 }}>
-                      <Typography
-                        variant="body2"
-                        sx={{ color: "#262626", lineHeight: 1.4 }}
-                      >
-                        <span style={{ fontWeight: 700, marginRight: "8px" }}>
-                          {commentUser?.username || "Аноним"}
-                        </span>
-                        {c.text}
-                      </Typography>
-                    </Box>
-                  </Box>
-                );
-              })
-            ) : (
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  height: "100%",
-                }}
+            {livePost.caption && (
+              <Typography
+                variant="body2"
+                sx={{ mb: 2, wordBreak: "break-word" }}
               >
-                <Typography variant="body2" sx={{ color: "gray" }}>
-                  Нет комментариев. Будьте первым!
-                </Typography>
-              </Box>
+                <strong>{livePost.author?.username}</strong> {livePost.caption}
+              </Typography>
             )}
+
+            {livePost.comments?.map((c: IComment) => {
+              // Вместо 'any' используем 'unknown' для безопасного приведения
+              const rawUser = c.user as unknown;
+
+              // Проверяем, является ли пользователь объектом с username
+              const isPopulated =
+                rawUser && typeof rawUser === "object" && "username" in rawUser;
+
+              // Теперь используем IUser для типизации
+              const commentUser = isPopulated ? (rawUser as IUser) : null;
+
+              return (
+                <Box key={c._id} sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
+                  <Typography variant="body2">
+                    {/* Теперь commentUser типизирован через IUser, ошибки не будет */}
+                    <strong>{commentUser?.username || "Аноним"}</strong>{" "}
+                    {c.text}
+                  </Typography>
+                </Box>
+              );
+            })}
           </Box>
 
-          {/* Поле ввода комментария */}
-          <Box
-            sx={{
-              p: 2,
-              borderTop: "1px solid #efefef",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
+          <Box sx={{ p: 2, borderTop: "1px solid #efefef", display: "flex" }}>
             <TextField
               fullWidth
               placeholder="Добавьте комментарий..."
@@ -244,19 +196,10 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               onKeyDown={handleKeyDown}
-              sx={{
-                pr: 2,
-                "& .MuiInput-underline:before": { borderBottom: "none" },
-                "& .MuiInput-underline:after": { borderBottom: "none" },
-                "& .MuiInput-underline:hover:not(.Mui-disabled):before": {
-                  borderBottom: "none",
-                },
-              }}
             />
             <IconButton
               onClick={handleSendComment}
               disabled={!commentText.trim()}
-              color="primary"
             >
               <SendIcon />
             </IconButton>

@@ -1,8 +1,8 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "../../api/axiosInstance";
 import { likePostApi } from "../../api/likes";
-import { addCommentApi } from "../../api/comments"; // 1. Импортируем функцию из апи
-import { IPost, IComment } from "../../types/index"; // 2. Импортируем интерфейс комментария напрямую из типов
+import { addCommentApi } from "../../api/comments";
+import { IPost, IComment } from "../../types/index";
 import { AxiosError } from "axios";
 
 interface PostsState {
@@ -68,20 +68,36 @@ export const addPost = createAsyncThunk<
   }
 });
 
-// 4. Добавление комментария (Исправленный экшен)
+// 4. Добавление комментария
 export const addComment = createAsyncThunk<
-  { postId: string; comment: IComment }, // <-- Заменили unknown на тип IComment
+  { postId: string; comment: IComment },
   { postId: string; text: string },
   { rejectValue: string }
 >("posts/addComment", async ({ postId, text }, { rejectWithValue }) => {
   try {
-    // Используем нашу функцию из папки api
     const data = await addCommentApi(postId, text);
-    return { postId, comment: data as IComment }; // Приводим к типу IComment
+    return { postId, comment: data as IComment };
   } catch (err: unknown) {
     const error = err as AxiosError<{ message: string }>;
     return rejectWithValue(
       error.response?.data?.message || "Ошибка добавления комментария",
+    );
+  }
+});
+
+// 5. Удаление поста
+export const deletePost = createAsyncThunk<
+  string,
+  string,
+  { rejectValue: string }
+>("posts/deletePost", async (postId, { rejectWithValue }) => {
+  try {
+    await axiosInstance.delete(`/posts/${postId}`);
+    return postId;
+  } catch (err: unknown) {
+    const error = err as AxiosError<{ message: string }>;
+    return rejectWithValue(
+      error.response?.data?.message || "Ошибка при удалении поста",
     );
   }
 });
@@ -109,6 +125,10 @@ const postsSlice = createSlice({
       .addCase(addPost.fulfilled, (state, action) => {
         state.items.unshift(action.payload);
       })
+      // Обработка deletePost
+      .addCase(deletePost.fulfilled, (state, action) => {
+        state.items = state.items.filter((post) => post._id !== action.payload);
+      })
       // Обработка toggleLikePost
       .addCase(toggleLikePost.fulfilled, (state, action) => {
         const { postId, liked, userId } = action.payload;
@@ -122,13 +142,13 @@ const postsSlice = createSlice({
           }
         }
       })
-      // Обработка addComment (Теперь TypeScript ругаться не будет!)
+      // Обработка addComment
       .addCase(addComment.fulfilled, (state, action) => {
         const { postId, comment } = action.payload;
         const post = state.items.find((p) => p._id === postId);
         if (post) {
           if (!post.comments) post.comments = [];
-          post.comments.push(comment); // Ошибка на WritableDraft ушла!
+          post.comments.push(comment);
         }
       });
   },

@@ -1,38 +1,40 @@
-import React, { useEffect, useMemo } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { Box, CircularProgress, Typography } from "@mui/material";
-import { fetchPosts } from "../redux/posts/postsSlice.js";
-import type { RootState, AppDispatch } from "../redux/store.js";
-import type { IPost } from "../redux/posts/postsSlice.js";
+import React, { useState, useEffect } from "react"; // Убрали useMemo
+import axios from "axios"; // Добавили axios
+import { Box, CircularProgress } from "@mui/material";
+import { IPost } from "../types/index";
+import PostDetailModal from "../components/Posts/PostDetailModal";
 
 const ExplorePage: React.FC = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { items, loading } = useSelector((state: RootState) => state.posts);
+  // 1. Используем локальное состояние для случайных постов
+  const [shuffledPosts, setShuffledPosts] = useState<IPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedPost, setSelectedPost] = useState<IPost | null>(null);
+  const [isPostModalOpen, setIsPostModalOpen] = useState(false);
 
+  // 2. Запрашиваем данные с нового URL
   useEffect(() => {
-    dispatch(fetchPosts());
-  }, [dispatch]);
+    const fetchRandomPosts = async () => {
+      try {
+        setLoading(true);
+        // Запрос к вашему новому эндпоинту
+        const { data } = await axios.get(
+          "http://localhost:3000/api/posts/random",
+        );
+        setShuffledPosts(data);
+      } catch (error) {
+        console.error("Ошибка при загрузке случайных постов:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Безопасное перемешивание и ограничение до 10 элементов без вызова Math.random в render
-  const displayPhotos = useMemo(() => {
-    const serverPosts = Array.isArray(items) ? items : [];
-    if (serverPosts.length === 0) return [];
+    fetchRandomPosts();
+  }, []); // Запускаем только при монтировании
 
-    // Используем псевдорандом на основе внутреннего состояния, чтобы линтер не ругался на impure функции
-    // При перезагрузке страницы порядок будет каждый раз уникальным благодаря изменению порядка в бэкенде или таймстампу
-    const shuffled = [...serverPosts].sort((a, b) => {
-      const hashA = a._id
-        .split("")
-        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      const hashB = b._id
-        .split("")
-        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      return (hashA % 3) - (hashB % 3);
-    });
-
-    // Строго отсекаем первые 10 элементов
-    return shuffled.slice(0, 10);
-  }, [items]);
+  const handleOpenModal = (post: IPost) => {
+    setSelectedPost(post);
+    setIsPostModalOpen(true);
+  };
 
   if (loading) {
     return (
@@ -49,14 +51,6 @@ const ExplorePage: React.FC = () => {
     );
   }
 
-  if (displayPhotos.length === 0) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-        <Typography color="textSecondary">Публикаций пока нет</Typography>
-      </Box>
-    );
-  }
-
   return (
     <Box sx={{ maxWidth: "975px", margin: "0 auto", padding: "20px 0" }}>
       <Box
@@ -67,39 +61,26 @@ const ExplorePage: React.FC = () => {
           gap: "4px",
         }}
       >
-        {displayPhotos.map((photo: IPost, index: number) => {
+        {shuffledPosts.map((photo: IPost, index: number) => {
           const mod = index % 10;
           let gridLayoutSx = {};
 
-          // Первая пятерка постов: 4 маленьких слева, 1 длинный СПРАВА (индекс 2)
-          if (mod === 2) {
-            gridLayoutSx = {
-              gridColumn: "3",
-              gridRow: "span 2",
-            };
-          }
+          if (mod === 2) gridLayoutSx = { gridColumn: "3", gridRow: "span 2" };
+          if (mod === 5) gridLayoutSx = { gridColumn: "1", gridRow: "span 2" };
 
-          // Вторая пятерка постов: 1 длинный СЛЕВА (индекс 5), 4 маленьких справа
-          if (mod === 5) {
-            gridLayoutSx = {
-              gridColumn: "1",
-              gridRow: "span 2",
-            };
-          }
-
-          const imageSrc =
-            photo.imageUrl.startsWith("http://") ||
-            photo.imageUrl.startsWith("https://")
-              ? photo.imageUrl
-              : `http://localhost:3000${photo.imageUrl}`;
+          const imageSrc = photo.imageUrl.startsWith("http")
+            ? photo.imageUrl
+            : `http://localhost:3000${photo.imageUrl}`;
 
           return (
             <Box
-              key={photo._id}
+              key={photo._id || index}
+              onClick={() => handleOpenModal(photo)}
               sx={{
                 position: "relative",
                 overflow: "hidden",
                 backgroundColor: "#efefef",
+                cursor: "pointer",
                 ...gridLayoutSx,
               }}
             >
@@ -118,6 +99,12 @@ const ExplorePage: React.FC = () => {
           );
         })}
       </Box>
+
+      <PostDetailModal
+        open={isPostModalOpen}
+        onClose={() => setIsPostModalOpen(false)}
+        post={selectedPost}
+      />
     </Box>
   );
 };

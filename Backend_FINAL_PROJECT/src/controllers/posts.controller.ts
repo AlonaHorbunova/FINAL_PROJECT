@@ -136,3 +136,69 @@ export const createPost = async (
     next(error);
   }
 };
+export const deletePost = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { postId } = req.params;
+    const post = await Post.findById(postId);
+
+    if (!post) throw new CustomError("Пост не найден", 404);
+
+    // Проверка, является ли текущий пользователь автором
+    if (post.author.toString() !== req.user?.id) {
+      throw new CustomError("Вы не можете удалить чужой пост", 403);
+    }
+
+    await Post.findByIdAndDelete(postId);
+    // Также удаляем связанные лайки и комменты
+    await Like.deleteMany({ post: postId });
+    await Comment.deleteMany({ post: postId });
+
+    res.json({ message: "Пост успешно удален" });
+  } catch (error) {
+    next(error);
+  }
+};
+export const getRandomPosts = async (
+  req: Request,
+  res: Response,
+  next: NextFunction, // Добавили next
+) => {
+  try {
+    // 1. Получаем случайные посты
+    const randomPosts = await Post.aggregate([{ $sample: { size: 10 } }]);
+
+    // 2. Наполняем их данными так же, как в getAllPosts
+    const postsWithDetails = await Promise.all(
+      randomPosts.map(async (post) => {
+        // Наполняем автора (так как агрегация возвращает чистый объект БД)
+        const postWithAuthor = await Post.populate(post, {
+          path: "author",
+          select: "username avatar",
+        });
+
+        // Находим лайки
+        const likesDocs = await Like.find({ post: post._id });
+        const likes = likesDocs.map((like) => like.user.toString());
+
+        // Находим комменты
+        const comments = await Comment.find({ post: post._id })
+          .populate("user", "username avatar")
+          .sort({ createdAt: 1 });
+
+        return {
+          ...postWithAuthor,
+          likes: likes,
+          comments: comments,
+        };
+      }),
+    );
+
+    res.json(postsWithDetails);
+  } catch (err) {
+    next(err); // Правильная передача ошибки
+  }
+};
