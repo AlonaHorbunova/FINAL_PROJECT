@@ -17,6 +17,11 @@ import {
   fetchConversations,
   Message,
 } from "./redux/chat/chatSlice";
+import {
+  fetchNotificationsThunk,
+  addNotification,
+  INotification, // 🔥 Импортируем тип уведомления для строгой типизации
+} from "./redux/notification/notificationSlice";
 import { socket } from "./api/socket";
 
 function App() {
@@ -30,31 +35,40 @@ function App() {
     }
   }, [token, user, dispatch]);
 
-  // 2. Глобальная загрузка данных чата при входе на сайт
-  // Добавили проверку user?._id, чтобы запрашивать беседы только тогда, когда юзер точно загружен
+  // 2. Глобальная загрузка данных чата и уведомлений при входе на сайт
   useEffect(() => {
     if (token && user?._id) {
       dispatch(fetchConversations());
+      dispatch(fetchNotificationsThunk()); // 🔥 Первично стягиваем историю уведомлений из БД
     }
   }, [token, user?._id, dispatch]);
 
-  // 3. Глобальный слушатель сокетов
-  const userId = user?._id; // Вытаскиваем конкретную строку ID наружу
+  // 3. Глобальный слушатель сокетов (Сообщения + Уведомления)
+  const userId = user?._id;
 
   useEffect(() => {
     if (userId) {
       console.log("🟢 Инициализация сокета для юзера:", userId);
       socket.emit("join", userId);
 
+      // Слушатель новых сообщений
       const handleNewMessage = (message: Message) => {
         console.log("📩 [Глобальный Сокет] Поймал сообщение:", message);
         dispatch(addMessage(message));
       };
 
+      // 🔥 Слушатель новых уведомлений (Лайки, комменты, подписки)
+      const handleNewNotification = (notification: INotification) => {
+        console.log("🔔 [Глобальный Сокет] Поймал уведомление:", notification);
+        dispatch(addNotification(notification));
+      };
+
       socket.on("new_message", handleNewMessage);
+      socket.on("new_notification", handleNewNotification); // 🔥 Начинаем слушать бэкенд
 
       return () => {
         socket.off("new_message", handleNewMessage);
+        socket.off("new_notification", handleNewNotification); // 🔥 Чистим за собой при размонтировании
       };
     }
   }, [userId, dispatch]);
@@ -71,7 +85,7 @@ function App() {
           flexGrow: 1,
           bgcolor: "#fafafa",
           minHeight: "100vh",
-          ml: token ? "240px" : 0,
+          ml: token ? "240px" : 0, // Убедись, что отступ совпадает с шириной твоего Сайдбара (244px в нашем Sidebar.tsx)
         }}
       >
         <Routes>

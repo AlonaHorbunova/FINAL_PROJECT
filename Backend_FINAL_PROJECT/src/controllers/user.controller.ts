@@ -167,3 +167,35 @@ export const followUser = async (
     next(error);
   }
 };
+// 4. Живой поиск пользователей по юзернейму или полному имени
+export const searchUsers = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { query } = req.query;
+    const myId = req.user?.id;
+
+    // Если поисковый запрос пустой, отдаем пустой массив
+    if (!query || typeof query !== "string" || query.trim() === "") {
+      return res.json({ users: [] });
+    }
+
+    // Ищем пользователей, чьи username или fullName подходят под паттерн
+    // $ne: myId — убирает текущего авторизованного пользователя из результатов поиска
+    const users = await User.find({
+      _id: { $ne: myId },
+      $or: [
+        { username: { $regex: query.trim(), $options: "i" } },
+        { fullName: { $regex: query.trim(), $options: "i" } },
+      ],
+    })
+      .select("username fullName avatar") // Берем только нужные для отображения поля
+      .limit(10); // Ограничиваем выдачу 10 пользователями, чтобы не грузить базу
+
+    res.json({ users });
+  } catch (error) {
+    next(error);
+  }
+};

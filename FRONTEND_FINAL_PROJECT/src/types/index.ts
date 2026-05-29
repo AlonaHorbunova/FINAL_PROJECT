@@ -1,20 +1,19 @@
-
 export interface IUser {
   _id: string;
   username: string;
+  fullName?: string;
   avatar?: string;
   bio?: string;
   website?: string;
-  followers?: string[]; 
-  following?: string[]; 
+  followers?: string[];
+  following?: string[];
   followersCount?: number;
   followingCount?: number;
 }
 
-
 export interface IComment {
   _id: string;
-  user: IUser; 
+  user: IUser;
   text: string;
   createdAt: string;
 }
@@ -22,10 +21,10 @@ export interface IComment {
 // 3. Обновим пост
 export interface IPost {
   _id: string;
-  imageUrl: string; 
-  caption: string; 
-  author: IUser; 
-  likes: string[]; 
+  imageUrl: string;
+  caption: string;
+  author: IUser;
+  likes: string[];
   comments: IComment[];
   createdAt: string;
 }

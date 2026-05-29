@@ -5,18 +5,20 @@ import axios from "axios";
 import { IUser } from "../../types";
 
 interface UserState {
-  profileUser: IUser | null; // Пользователь, чей профиль мы сейчас смотрим (мы сами или чужой)
+  profileUser: IUser | null;
+  searchResults: IUser[]; // 🔥 Добавили поле для хранения результатов поиска
   loading: boolean;
   error: string | null;
 }
 
 const initialState: UserState = {
   profileUser: null,
+  searchResults: [], // Изначально поиск пустой
   loading: false,
   error: null,
 };
 
-// Экшен получения данных текущего авторизованного пользователя (GET /api/users/me)
+// Экшен получения данных текущего пользователя
 export const fetchCurrentUser = createAsyncThunk<IUser, void>(
   "user/fetchCurrentUser",
   async (_, { rejectWithValue }) => {
@@ -32,7 +34,7 @@ export const fetchCurrentUser = createAsyncThunk<IUser, void>(
   },
 );
 
-// Экшен получения чужого профиля по ID (GET /api/users/:id)
+// Экшен получения чужого профиля по ID
 export const fetchUserById = createAsyncThunk<IUser, string>(
   "user/fetchUserById",
   async (userId, { rejectWithValue }) => {
@@ -48,12 +50,27 @@ export const fetchUserById = createAsyncThunk<IUser, string>(
   },
 );
 
+// 🔥 Новое асинхронное действие для живого поиска пользователей
+export const searchUsersThunk = createAsyncThunk<IUser[], string>(
+  "user/searchUsers",
+  async (query, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.get(`/users/search?query=${query}`);
+      return response.data.users as IUser[];
+    } catch (err: unknown) {
+      const error = err as AxiosError<{ message: string }>;
+      return rejectWithValue(
+        error.response?.data?.message || "Ошибка при поиске пользователей",
+      );
+    }
+  },
+);
+
 export const updateUserProfile = createAsyncThunk<IUser, FormData>(
   "user/updateUserProfile",
   async (formData, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem("token");
-
       const response = await axios.put(
         "http://localhost:3000/api/users/update",
         formData,
@@ -63,7 +80,6 @@ export const updateUserProfile = createAsyncThunk<IUser, FormData>(
           },
         },
       );
-
       return response.data.user as IUser;
     } catch (err: unknown) {
       const error = err as AxiosError<{ message: string }>;
@@ -78,10 +94,13 @@ const userSlice = createSlice({
   name: "user",
   initialState,
   reducers: {
-    // Очистка данных профиля вручную, если потребуется
     clearProfile: (state) => {
       state.profileUser = null;
       state.error = null;
+    },
+    // 🔥 Очистка результатов поиска, когда закрываем шторку
+    clearSearchResults: (state) => {
+      state.searchResults = [];
     },
   },
   extraReducers: (builder) => {
@@ -90,7 +109,7 @@ const userSlice = createSlice({
       .addCase(fetchCurrentUser.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.profileUser = null; // ← Сбрасываем старого юзера при начале загрузки
+        state.profileUser = null;
       })
       .addCase(fetchCurrentUser.fulfilled, (state, action) => {
         state.loading = false;
@@ -105,7 +124,7 @@ const userSlice = createSlice({
       .addCase(fetchUserById.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.profileUser = null; // ← КРИТИЧНО ИСПРАВЛЕНО: Убирает эффект "призрака" старого собеседника
+        state.profileUser = null;
       })
       .addCase(fetchUserById.fulfilled, (state, action) => {
         state.loading = false;
@@ -114,6 +133,11 @@ const userSlice = createSlice({
       .addCase(fetchUserById.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+
+      // 🔥 Живой поиск пользователей
+      .addCase(searchUsersThunk.fulfilled, (state, action) => {
+        state.searchResults = action.payload;
       })
 
       // Обработка обновления профиля
@@ -132,5 +156,5 @@ const userSlice = createSlice({
   },
 });
 
-export const { clearProfile } = userSlice.actions;
+export const { clearProfile, clearSearchResults } = userSlice.actions;
 export default userSlice.reducer;

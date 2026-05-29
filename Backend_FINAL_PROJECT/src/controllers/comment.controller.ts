@@ -1,11 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
 import { Comment } from "../db/models/Comment.js";
 import { Post } from "../db/models/Post.js";
-import { Notification } from "../db/models/Notification.js";
-import { Server } from "socket.io";
-import { Types } from "mongoose";
+import { sendNotification } from "../utils/sendNotification.js";
 
-// Расширяем интерфейс
 interface AuthRequest extends Request {
   user?: { id: string };
 }
@@ -14,51 +11,43 @@ export const addComment = async (
   req: Request,
   res: Response,
   next: NextFunction,
-) => {
+): Promise<void> => {
   try {
-    const { postId } = req.params;
     const authReq = req as AuthRequest;
-    const userId = authReq.user?.id;
+
+    // 🔥 Строго фиксируем строки
+    const postId = authReq.params.postId as string;
+    const userId = authReq.user?.id as string;
     const { text } = req.body;
 
-    // 1. Проверяем наличие ID и текста
     if (!userId || !postId) {
-      return res
-        .status(401)
-        .json({ message: "Недостаточно данных для комментария" });
+      res.status(401).json({ message: "Недостаточно данных для комментария" });
+      return;
     }
 
-    // 2. Ищем пост
     const post = await Post.findById(postId);
     if (!post) {
-      return res.status(404).json({ message: "Пост не найден" });
+      res.status(404).json({ message: "Пост не найден" });
+      return;
     }
 
-    // Здесь используем 'author' и приводим к любому типу, чтобы взять ID строкой
     const postAuthorId = (post as any).author.toString();
 
-    // 3. Создаем комментарий (userId as string — это "успокоительное" для TS)
+    // Mongoose сам превратит эти строки в ObjectId на основе схемы Comment
     const comment = await Comment.create({
-      user: new Types.ObjectId(userId as string),
-      post: new Types.ObjectId(postId as string),
+      user: userId,
+      post: postId,
       text,
     });
 
-    // 4. Логика уведомлений
+    // Живое уведомление через утилиту
     if (postAuthorId !== userId) {
-      await Notification.create({
-        receiver: new Types.ObjectId(postAuthorId as string),
-        issuer: new Types.ObjectId(userId as string),
+      await sendNotification({
+        receiver: postAuthorId,
+        issuer: userId,
         type: "comment",
-        post: new Types.ObjectId(postId as string),
+        post: postId,
       });
-
-      const io = req.app.get("io") as Server;
-      if (io) {
-        io.to(postAuthorId).emit("notification", {
-          message: "Новый комментарий!",
-        });
-      }
     }
 
     res.status(201).json(comment);
